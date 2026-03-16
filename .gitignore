@@ -1,0 +1,17 @@
+# build output
+dist/
+
+# test coverage
+coverage/
+
+# generated types
+.astro/
+
+# dependencies
+node_modules/
+
+# macOS-specific files
+.DS_Store
+
+# jetbrains setting folder
+.idea/

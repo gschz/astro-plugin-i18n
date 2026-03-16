@@ -1,0 +1,10 @@
+dist
+node_modules
+bun.lock
+
+demo/.astro
+demo/dist
+demo/node_modules
+
+src/types/i18n-types.d.ts
+demo/src/types/i18n-types.d.ts
