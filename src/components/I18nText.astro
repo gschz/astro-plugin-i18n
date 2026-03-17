@@ -1,0 +1,40 @@
+---
+/**
+ * Componente Astro para renderizado SSR de traducciones.
+ *
+ * A diferencia de `TranslatedText`, este componente resuelve la traducción en el
+ * servidor usando `translateAsync`, por lo que la página inicial sale renderizada
+ * sin FOUC y sin depender de la hidratación del cliente.
+ */
+import { getCurrentLanguage } from '../core/language';
+import { translateAsync } from '../core/translate';
+import type { Language, TranslationKey, TranslationValues } from '../types';
+
+interface Props {
+  key: TranslationKey;
+  lang?: Language;
+  values?: TranslationValues;
+  class?: string;
+  element?: 'span' | 'div' | 'p' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'label';
+  [key: string]: any;
+}
+
+const { key, lang, values, element: Element = 'span', class: className, ...rest } = Astro.props;
+
+// En SSR tomamos primero el idioma explícito; si no existe, usamos el idioma
+// resuelto por el middleware desde Astro.locals.
+const targetLang = lang || getCurrentLanguage(Astro.locals);
+const translatedText = await translateAsync(key, { lang: targetLang, values });
+
+const elementAttributes = {
+  ...rest,
+  'data-i18n-key': rest['data-i18n-key'] ?? key,
+  ...(values
+    ? {
+        'data-i18n-values': rest['data-i18n-values'] ?? JSON.stringify(values),
+      }
+    : {}),
+};
+---
+
+<Element class={className} {...elementAttributes}>{translatedText}</Element>
