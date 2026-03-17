@@ -152,8 +152,13 @@ export function t(key: TranslationKey, options?: TranslationOptions): string {
  */
 function applyVariables(text: string, values: Record<string, string | number | boolean>): string {
   return Object.entries(values).reduce((result, [key, value]) => {
-    return result.replace(new RegExp(`{${key}}`, 'g'), String(value));
+    const escapedKey = escapeRegExp(key);
+    return result.replace(new RegExp(`{${escapedKey}}`, 'g'), String(value));
   }, text);
+}
+
+function escapeRegExp(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /**

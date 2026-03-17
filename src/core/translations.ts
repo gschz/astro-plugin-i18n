@@ -7,7 +7,7 @@
  * junto con {@link populateClientCache} desde `./translate`.
  */
 
-import fs from 'node:fs';
+import fsPromises from 'node:fs/promises';
 import path from 'node:path';
 import type { Language } from '../types';
 import { getConfig } from './config';
@@ -52,12 +52,24 @@ export async function loadTranslations(lang: Language): Promise<Record<string, a
     const translationsDir = path.resolve(process.cwd(), config.translationsDir as string);
     const filePath = path.join(translationsDir, `${lang}.json`);
 
-    if (!fs.existsSync(filePath)) {
-      console.warn(`[i18n] No se encontró archivo de traducciones para el idioma "${lang}" en: ${filePath}`);
-      return {};
+    let fileContent: string;
+
+    try {
+      fileContent = await fsPromises.readFile(filePath, 'utf-8');
+    } catch (error: unknown) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        (error as { code?: string }).code === 'ENOENT'
+      ) {
+        console.warn(`[i18n] No se encontró archivo de traducciones para el idioma "${lang}" en: ${filePath}`);
+        return {};
+      }
+
+      throw error;
     }
 
-    const fileContent = fs.readFileSync(filePath, 'utf-8');
     const translations = JSON.parse(fileContent) as Record<string, any>;
 
     // Guardamos en caché antes de retornar para que llamadas subsiguientes

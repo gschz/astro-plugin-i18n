@@ -67,12 +67,14 @@ function getOptions(): Partial<I18nPluginOptions> | null {
 }
 
 declare global {
-  interface Locals {
-    /** Contexto i18n inyectado por el middleware en cada petición SSR. */
-    i18n?: {
-      /** Configuración activa del plugin para este request. */
-      config?: Partial<I18nPluginOptions>;
-    };
+  namespace App {
+    interface Locals {
+      /** Contexto i18n inyectado por el middleware en cada petición SSR. */
+      i18n?: {
+        /** Configuración activa del plugin para este request. */
+        config?: Partial<I18nPluginOptions>;
+      };
+    }
   }
 }
 

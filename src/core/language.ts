@@ -64,7 +64,7 @@ export function getCurrentLanguage(locals?: Record<string, any>): Language {
     }
 
     // Prioridad 3: detección automática por navigator.language (solo si autoDetect).
-    if (globalConfig.autoDetect ?? localsConfig?.autoDetect) {
+    if (localsConfig?.autoDetect ?? globalConfig.autoDetect) {
       const browserLang = navigator.language.split('-')[0];
       if (browserLang) {
         return browserLang as Language;
@@ -136,8 +136,14 @@ export function setupLanguage(): void {
   const initialSupportedLangs = runtimeWindow.__INITIAL_I18N_ALL_TRANSLATIONS__
     ? Object.keys(runtimeWindow.__INITIAL_I18N_ALL_TRANSLATIONS__)
     : [];
+
+  const configuredSupportedLangs =
+    config.supportedLangs && config.supportedLangs.length > 0 ? config.supportedLangs : [];
+
   const supportedLangs =
-    config.supportedLangs && config.supportedLangs.length > 0 ? config.supportedLangs : initialSupportedLangs;
+    configuredSupportedLangs.length > 0
+      ? Array.from(new Set([...configuredSupportedLangs, ...initialSupportedLangs]))
+      : initialSupportedLangs;
 
   // El fallback final es el idioma SSR → primer idioma soportado → config → "en".
   const fallbackDefaultLang = initialState?.lang || supportedLangs[0] || config.defaultLang || 'en';

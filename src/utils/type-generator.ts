@@ -70,7 +70,8 @@ function generateTypeDefinitionCode(translations: Record<string, any>, supported
  */
 `;
 
-  const langType = supportedLangs.length > 0 ? supportedLangs.map((lang) => `'${lang}'`).join(' | ') : 'string';
+  const langType =
+    supportedLangs.length > 0 ? supportedLangs.map((lang) => `'${escapeTsStringLiteral(lang)}'`).join(' | ') : 'string';
 
   code += `export type Lang = ${langType};
 export type GeneratedLanguage = Lang;
@@ -92,7 +93,7 @@ export type GeneratedLanguage = Lang;
   } else {
     code += `export type I18nKey =
 `;
-    code += keys.map((key) => `  | '${key.replace(/'/g, "\\'")}'`).join('\n');
+    code += keys.map((key) => `  | '${escapeTsStringLiteral(key)}'`).join('\n');
     code += `;
 `;
   }
@@ -121,7 +122,7 @@ export type TFunction = (key: I18nKey, options?: I18nOptions) => string;
 export const I18N_KEYS = {
 `;
 
-  code += keys.map((key) => `  '${key.replace(/'/g, "\\'")}': '${key.replace(/'/g, "\\'")}',`).join('\n');
+  code += keys.map((key) => `  '${escapeTsStringLiteral(key)}': '${escapeTsStringLiteral(key)}',`).join('\n');
 
   if (code.endsWith(',')) {
     code = code.slice(0, -1);
@@ -151,6 +152,12 @@ export {};
 `;
 
   return code;
+}
+
+function escapeTsStringLiteral(value: string): string {
+  const json = JSON.stringify(value);
+  const inner = json.slice(1, -1);
+  return inner.replace(/'/g, "\\'");
 }
 
 /** Recorre recursivamente el JSON y extrae todas las claves hoja en notación de puntos. */
