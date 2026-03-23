@@ -1,0 +1,123 @@
+{
+  "name": "@gschz/astro-plugin-i18n",
+  "version": "1.0.1",
+  "description": "Internationalization (i18n) plugin for Astro, focused on simplicity, SSR-first and reactive client updates.",
+  "type": "module",
+  "author": "Gera Schz <gschz.git@gmail.com>",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./components/*.astro": "./dist/components/*.astro",
+    "./components/*": {
+      "import": "./dist/components/*.js",
+      "types": "./dist/components/*.d.ts"
+    },
+    "./integration": {
+      "import": "./dist/integration.js",
+      "types": "./dist/integration.d.ts"
+    },
+    "./client": {
+      "import": "./dist/client.js",
+      "types": "./dist/client.d.ts"
+    },
+    "./middleware-entrypoint": {
+      "import": "./dist/middleware-entrypoint.js",
+      "types": "./dist/middleware-entrypoint.d.ts"
+    }
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "rimraf dist && tsup && bun run build:cp-astro && bun run build:fix-imports",
+    "build:cp-astro": "copyfiles -u 2 \"src/components/**/*.astro\" dist/components",
+    "build:fix-imports": "bun run scripts/fix-astro-imports.ts",
+    "lint": "eslint .",
+    "lint:strict": "eslint . --max-warnings=0",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier . --check",
+    "format:write": "prettier . --write",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "astro check && tsc --noEmit",
+    "demo:dev": "cd demo && bun run dev",
+    "demo:check": "cd demo && bun run astro check",
+    "demo:build": "cd demo && bun run build",
+    "demo:preview": "cd demo && bun run preview",
+    "quality": "bun run lint && bun run format && bun run test",
+    "version:rc": "npm version prerelease --preid rc --no-git-tag-version",
+    "publish": "bun publish --access public",
+    "publish:next": "bun publish --access public --tag next",
+    "publish:latest": "bun publish --access public --tag latest",
+    "prepublishOnly": "bun run build"
+  },
+  "keywords": [
+    "astro",
+    "astro-plugin",
+    "astro-integration",
+    "i18n",
+    "internationalization",
+    "translation"
+  ],
+  "peerDependencies": {
+    "astro": ">=6.0.0",
+    "react": ">=19.0.0",
+    "react-dom": "^19.2.4"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "@astrojs/check": "^0.9.8",
+    "@astrojs/react": "^5.0.0",
+    "@types/node": "^25.5.0",
+    "@types/react": "^19.2.14",
+    "astro": "^6.0.5",
+    "astro-integration-kit": "^0.20.0",
+    "astro-eslint-parser": "^1.3.0",
+    "copyfiles": "^2.4.1",
+    "eslint": "^9.39.4",
+    "jiti": "^2.6.1",
+    "eslint-plugin-astro": "^1.6.0",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "globals": "^17.4.0",
+    "jsdom": "^29.0.0",
+    "prettier": "^3.8.1",
+    "prettier-plugin-astro": "^0.14.1",
+    "react": "^19.2.4",
+    "rimraf": "^6.1.3",
+    "@typescript-eslint/eslint-plugin": "^8.57.1",
+    "@typescript-eslint/parser": "^8.57.1",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.0"
+  },
+  "engines": {
+    "bun": ">=1.3.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gschz/astro-plugin-i18n"
+  },
+  "bugs": {
+    "url": "https://github.com/gschz/astro-plugin-i18n/issues"
+  },
+  "homepage": "https://astro-plugin-i18n-demo-22e0a5045e57.herokuapp.com/",
+  "publishConfig": {
+    "access": "public"
+  }
+}
