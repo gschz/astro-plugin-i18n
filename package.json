@@ -1,6 +1,6 @@
 {
   "name": "@gschz/astro-plugin-i18n",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Internationalization (i18n) plugin for Astro, focused on simplicity, SSR-first and reactive client updates.",
   "type": "module",
   "author": "Gera Schz <gschz.git@gmail.com>",
