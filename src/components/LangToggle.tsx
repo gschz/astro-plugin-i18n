@@ -5,11 +5,16 @@ import type { Language } from '../types';
 
 /** Props del selector de idioma para React. */
 interface LangToggleProps {
+  /** Clase CSS adicional para el contenedor raíz del dropdown. */
   className?: string;
+  /** Lista de idiomas seleccionables con código y etiqueta visible. */
   languages: Array<{
+    /** Código de idioma (ej: en, es, pt-BR). */
     code: Language;
+    /** Etiqueta mostrada al usuario para el idioma. */
     label: string;
   }>;
+  /** Idioma inicial opcional; si no se indica, usa el idioma global activo. */
   currentLang?: Language;
 }
 

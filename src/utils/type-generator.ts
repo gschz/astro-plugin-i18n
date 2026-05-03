@@ -40,7 +40,6 @@ export async function generateTranslationTypes(): Promise<string> {
     }
 
     fs.writeFileSync(outputPath, typeDefinitionCode, 'utf-8');
-    console.info(`[i18n-types] Successfully generated translation types at: ${outputPath}`);
     return outputPath;
   } catch (error) {
     console.error(`[i18n-types] Failed to write types file to ${outputPath}:`, error);
@@ -85,7 +84,7 @@ export type GeneratedLanguage = Lang;
 
   const keys: string[] = [];
   extractKeysRecursive(translations, '', keys);
-  keys.sort();
+  keys.sort((a, b) => a.localeCompare(b));
 
   if (keys.length === 0) {
     code += `export type I18nKey = string; // No keys found in default language file
@@ -157,7 +156,7 @@ export {};
 function escapeTsStringLiteral(value: string): string {
   const json = JSON.stringify(value);
   const inner = json.slice(1, -1);
-  return inner.replace(/'/g, "\\'");
+  return inner.replaceAll("'", String.raw`\'`);
 }
 
 /** Recorre recursivamente el JSON y extrae todas las claves hoja en notación de puntos. */
