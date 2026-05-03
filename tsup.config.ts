@@ -17,6 +17,6 @@ export default defineConfig({
   splitting: false,
   // React y Astro deben resolverse desde el proyecto consumidor.
   external: ['astro', 'astro/middleware', 'react', 'react/jsx-runtime'],
-  treeshake: true,
+  treeshake: false, // Disabled for debugging middleware logging
   outDir: 'dist',
 });
