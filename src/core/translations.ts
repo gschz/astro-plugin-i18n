@@ -92,23 +92,14 @@ export async function loadTranslations(lang: Language): Promise<Record<string, a
  */
 export async function getTranslation(key: string, lang: Language): Promise<string> {
   const translations = await loadTranslations(lang);
-  const keys = key.split('.');
-
-  // Traversal iterativo del objeto anidado usando cada segmento de la clave.
-  let result: any = translations;
-  for (const part of keys) {
-    if (!result || typeof result !== 'object') {
-      return handleMissingTranslation(key, lang);
-    }
-    result = result[part];
-  }
+  const result = resolveNestedKey(translations, key);
 
   if (typeof result === 'string') {
     return result;
   }
 
   // La clave existe pero apunta a un objeto, no a una cadena hoja.
-  return handleMissingTranslation(key, lang);
+  return handleMissingTranslation(key, lang, new Set([lang]));
 }
 
 /**
@@ -118,8 +109,23 @@ export async function getTranslation(key: string, lang: Language): Promise<strin
  * @param lang - Idioma en que se buscó.
  * @returns Valor de sustitución según `missingKeyStrategy`.
  */
-async function handleMissingTranslation(key: string, lang: Language): Promise<string> {
+async function handleMissingTranslation(key: string, lang: Language, visited: Set<Language>): Promise<string> {
   const config = getConfig();
+
+  const fallbackLang = config.fallback?.[lang];
+
+  if (fallbackLang && !visited.has(fallbackLang)) {
+    const fallbackTranslations = await loadTranslations(fallbackLang);
+    const fallbackResult = resolveNestedKey(fallbackTranslations, key);
+
+    if (typeof fallbackResult === 'string') {
+      return fallbackResult;
+    }
+
+    const nextVisited = new Set(visited);
+    nextVisited.add(fallbackLang);
+    return handleMissingTranslation(key, fallbackLang, nextVisited);
+  }
 
   switch (config.missingKeyStrategy) {
     case 'empty':
@@ -143,4 +149,19 @@ export function clearTranslationsCache(): void {
   Object.keys(translationsCache).forEach((key) => {
     delete translationsCache[key];
   });
+}
+
+function resolveNestedKey(source: Record<string, any>, key: string): unknown {
+  const keys = key.split('.');
+
+  let result: any = source;
+  for (const part of keys) {
+    if (!result || typeof result !== 'object') {
+      return undefined;
+    }
+
+    result = result[part];
+  }
+
+  return result;
 }
