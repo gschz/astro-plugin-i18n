@@ -44,11 +44,11 @@ export function createI18nIntegration(options: Partial<I18nPluginOptions> = {}):
         initConfig(options);
         logAppliedConfig(logger);
 
-        // Persistimos las opciones en `global` para que el middleware pueda
+        // Persistimos las opciones en `globalThis` para que el middleware pueda
         // acceder a ellas incluso en entornos donde el módulo sea reimportado.
-        if (typeof global !== 'undefined') {
+        if (typeof globalThis !== 'undefined') {
           try {
-            global.__ASTRO_I18N_OPTIONS__ = options;
+            globalThis.__ASTRO_I18N_OPTIONS__ = options;
             logger.debug('Config options stored in global object for middleware');
           } catch {
             logger.warn('Failed to store config in global object');

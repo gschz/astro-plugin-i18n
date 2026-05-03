@@ -58,4 +58,33 @@ describe('translate API (client cache)', () => {
 
     expect(t('demo.missing')).toBe('demo.missing');
   });
+
+  it('usa fallback de idioma en cliente antes de missingKeyStrategy', () => {
+    updateConfig({
+      fallback: {
+        fr: 'en',
+      },
+      missingKeyStrategy: 'key',
+    });
+
+    populateClientCache('en', {
+      demo: {
+        welcome: 'Hello',
+      },
+    });
+
+    expect(t('demo.welcome', { lang: 'fr' })).toBe('Hello');
+  });
+
+  it('evita ciclos en fallback de cliente y retorna key cuando falta', () => {
+    updateConfig({
+      fallback: {
+        fr: 'en',
+        en: 'fr',
+      },
+      missingKeyStrategy: 'key',
+    });
+
+    expect(t('demo.missing', { lang: 'fr' })).toBe('demo.missing');
+  });
 });

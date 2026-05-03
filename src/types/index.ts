@@ -63,6 +63,22 @@ export interface TranslationOptions {
   lang?: Language;
 }
 
+/** Estrategias de enrutado multilingüe soportadas por el plugin. */
+export type I18nRoutingStrategy = 'manual' | 'prefix' | 'prefix-except-default';
+
+/**
+ * Configuración opcional del routing i18n.
+ *
+ * - `manual`: no aplica redirects automáticos.
+ * - `prefix`: exige prefijo de idioma para todas las rutas (`/es/...`, `/en/...`).
+ * - `prefix-except-default`: el idioma por defecto no lleva prefijo.
+ */
+export interface I18nRoutingOptions {
+  strategy?: I18nRoutingStrategy;
+  prefixDefaultLocale?: boolean;
+  redirectToDefaultLocale?: boolean;
+}
+
 /**
  * Configuración completa del plugin.
  * Todos los campos son opcionales para mayor ergonomía, pero `defaultLang`
@@ -73,6 +89,10 @@ export interface TranslationConfig {
   defaultLang?: Language;
   /** Lista de idiomas que la aplicación soporta activamente. */
   supportedLangs?: Language[];
+  /** Cadena de fallback por idioma, ej: { fr: 'en', pt: 'es' }. */
+  fallback?: Record<string, Language>;
+  /** Configuración de routing multilingüe. Por defecto usa estrategia `manual`. */
+  routing?: I18nRoutingOptions;
   /** Ruta al directorio que contiene los archivos JSON de traducción. Por defecto `"./src/i18n"`. */
   translationsDir?: string;
   /**

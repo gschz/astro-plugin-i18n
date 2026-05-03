@@ -7,10 +7,10 @@
  */
 
 import type { Language } from '../types';
-import { getDefaultLanguage, getSupportedLanguages } from './config';
+import { getConfig, getSupportedLanguages } from './config';
 import { getCurrentLanguage } from './language';
-import { getTranslationsForLanguage } from './translations';
-import { clearTranslationsCache } from './translations';
+import { getTranslationsForLanguage, clearTranslationsCache } from './translations';
+import { getRoutingRedirect } from './routing';
 
 /**
  * Estructura de estado inicial para hidratar i18n en el cliente.
@@ -24,6 +24,8 @@ export interface I18nClientBootstrapPayload {
   allTranslations: Record<Language, Record<string, any>>;
   /** Lista final de idiomas usados para construir `allTranslations`. */
   supportedLangs: Language[];
+  /** Configuración efectiva del plugin para hidratar el cliente. */
+  config: ReturnType<typeof getConfig>;
 }
 
 /**
@@ -48,12 +50,13 @@ export function isLanguageSupported(lang: Language): boolean {
 }
 
 /**
- * Determina si la URL dada necesita ser redirigida para incluir el prefijo
- * de idioma por defecto cuando la ruta no comienza con un idioma soportado.
+ * Determina si la URL dada necesita ser redirigida según la configuración de
+ * routing i18n activa.
  *
- * Por ejemplo, si `defaultLang` es `"en"` y la URL es `/about`, devuelve
- * una nueva URL con la ruta `/en/about`. Si la URL ya comienza con un idioma
- * válido, devuelve `null` (no se requiere redirección).
+ * El comportamiento depende de `config.routing.strategy`:
+ * - `manual`: nunca redirige.
+ * - `prefix`: exige prefijo de idioma para todas las rutas.
+ * - `prefix-except-default`: el idioma por defecto no lleva prefijo.
  *
  * @param url - URL de la petición entrante.
  * @returns Nueva URL con el prefijo de idioma, o `null` si no se necesita redirección.
@@ -66,20 +69,7 @@ export function isLanguageSupported(lang: Language): boolean {
  * ```
  */
 export function getLanguageRedirect(url: URL): URL | null {
-  const supportedLangs = getSupportedLanguages();
-  const defaultLang = getDefaultLanguage();
-  const segments = url.pathname.split('/').filter(Boolean);
-  const langSegment = segments[0];
-
-  // Si el primer segmento no corresponde a ningún idioma soportado,
-  // redirigimos al mismo path bajo el idioma por defecto.
-  if (!langSegment || !supportedLangs.includes(langSegment)) {
-    const newUrl = new URL(url.toString());
-    newUrl.pathname = `/${defaultLang}${url.pathname}`;
-    return newUrl;
-  }
-
-  return null;
+  return getRoutingRedirect(url, getConfig());
 }
 
 /**
@@ -95,6 +85,7 @@ export function getLanguageRedirect(url: URL): URL | null {
  *   `window.__INITIAL_I18N_ALL_TRANSLATIONS__`.
  */
 export async function getI18nClientBootstrapPayload(locals?: Record<string, any>): Promise<I18nClientBootstrapPayload> {
+  const config = getConfig();
   const lang = getCurrentLanguage(locals);
   const translations = await getTranslationsForLanguage(lang);
 
@@ -113,5 +104,6 @@ export async function getI18nClientBootstrapPayload(locals?: Record<string, any>
     translations,
     allTranslations,
     supportedLangs,
+    config,
   };
 }

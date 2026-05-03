@@ -128,6 +128,12 @@ export function t(key: TranslationKey, options?: TranslationOptions): string {
     return options?.values ? applyVariables(translation, options.values) : translation;
   }
 
+  const fallbackTranslation = resolveFallbackTranslation(String(key), lang, config.fallback, new Set([lang]));
+
+  if (fallbackTranslation !== null) {
+    return options?.values ? applyVariables(fallbackTranslation, options.values) : fallbackTranslation;
+  }
+
   switch (config.missingKeyStrategy) {
     case 'empty':
       return '';
@@ -153,12 +159,12 @@ export function t(key: TranslationKey, options?: TranslationOptions): string {
 function applyVariables(text: string, values: Record<string, string | number | boolean>): string {
   return Object.entries(values).reduce((result, [key, value]) => {
     const escapedKey = escapeRegExp(key);
-    return result.replace(new RegExp(`{${escapedKey}}`, 'g'), String(value));
+    return result.replaceAll(new RegExp(`{${escapedKey}}`, 'g'), String(value));
   }, text);
 }
 
 function escapeRegExp(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return str.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 }
 
 /**
@@ -199,4 +205,31 @@ export function useTranslation() {
     /** Versión de `t` pre-vinculada al idioma activo del hook. */
     t: (key: TranslationKey, options?: Omit<TranslationOptions, 'lang'>) => t(key, { ...options, lang: language }),
   };
+}
+
+function resolveFallbackTranslation(
+  key: string,
+  lang: Language,
+  fallbackMap: Record<string, Language> | undefined,
+  visited: Set<Language>,
+): string | null {
+  if (!fallbackMap) {
+    return null;
+  }
+
+  const fallbackLang = fallbackMap[lang];
+
+  if (!fallbackLang || visited.has(fallbackLang)) {
+    return null;
+  }
+
+  const fallbackCacheKey = `${fallbackLang}:${key}`;
+
+  if (clientTranslationsCache[fallbackCacheKey] !== undefined) {
+    return clientTranslationsCache[fallbackCacheKey];
+  }
+
+  const nextVisited = new Set(visited);
+  nextVisited.add(fallbackLang);
+  return resolveFallbackTranslation(key, fallbackLang, fallbackMap, nextVisited);
 }

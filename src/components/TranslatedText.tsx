@@ -4,9 +4,13 @@ import type { Language, TranslationKey, TranslationValues } from '../types';
 
 /** Props del componente React que renderiza una traducción. */
 interface TranslatedTextProps extends Omit<React.HTMLAttributes<HTMLElement>, 'children'> {
+  /** Clave de traducción en notación de puntos. */
   textKey: TranslationKey;
+  /** Variables para interpolación en la traducción (`{name}`, `{count}`, etc.). */
   values?: TranslationValues;
+  /** Elemento HTML/React que envuelve el contenido (por defecto `span`). */
   as?: React.ElementType;
+  /** Fuerza idioma para este nodo, sin depender del idioma global actual. */
   lang?: Language;
   /** Fallback opcional cuando la estrategia actual devuelve la key sin traducir. */
   fallback?: React.ReactNode;
@@ -104,7 +108,7 @@ function areShallowEqualProps(previousProps: Record<string, unknown>, nextProps:
   }
 
   for (const key of previousKeys) {
-    if (!Object.prototype.hasOwnProperty.call(nextProps, key)) {
+    if (!Object.hasOwn(nextProps, key)) {
       return false;
     }
 

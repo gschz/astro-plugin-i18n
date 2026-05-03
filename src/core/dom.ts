@@ -51,7 +51,7 @@ export function renderDataI18n(options: DataI18nRenderOptions = {}): void {
   const keyAttribute = options.keyAttribute ?? 'data-i18n-key';
   const valuesAttribute = options.valuesAttribute ?? 'data-i18n-values';
 
-  const allowedSet = options.allowedKeys ? new Set(options.allowedKeys as ReadonlyArray<string>) : null;
+  const allowedSet = options.allowedKeys ? new Set(options.allowedKeys) : null;
 
   root.querySelectorAll(`[${keyAttribute}]`).forEach((element) => {
     const key = element.getAttribute(keyAttribute);
@@ -65,7 +65,7 @@ export function renderDataI18n(options: DataI18nRenderOptions = {}): void {
     }
 
     const values = parseValues(element.getAttribute(valuesAttribute));
-    const translatedText = t(key as TranslationKey, values ? { values } : undefined);
+    const translatedText = t(key, values ? { values } : undefined);
 
     element.textContent = translatedText;
   });

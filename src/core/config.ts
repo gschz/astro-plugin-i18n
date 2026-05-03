@@ -8,6 +8,7 @@
  */
 
 import type { I18nPluginOptions, Language, TranslationConfig } from '../types';
+import { normalizeRoutingOptions } from './routing';
 
 /**
  * Valores predeterminados para todos los campos de configuración.
@@ -16,6 +17,11 @@ import type { I18nPluginOptions, Language, TranslationConfig } from '../types';
 const defaultConfig: TranslationConfig = {
   defaultLang: undefined,
   supportedLangs: [],
+  routing: {
+    strategy: 'manual',
+    prefixDefaultLocale: false,
+    redirectToDefaultLocale: false,
+  },
   translationsDir: './src/i18n',
   autoDetect: true,
   generateTypes: false,
@@ -44,10 +50,13 @@ export function getConfig(): TranslationConfig {
   const normalizedSupportedLangs =
     currentConfig.supportedLangs && currentConfig.supportedLangs.length > 0 ? currentConfig.supportedLangs : ['en'];
 
+  const normalizedRouting = normalizeRoutingOptions(currentConfig.routing);
+
   return {
     ...currentConfig,
     defaultLang: currentConfig.defaultLang ?? 'en',
     supportedLangs: normalizedSupportedLangs,
+    routing: normalizedRouting,
     translationsDir: currentConfig.translationsDir ?? './src/i18n',
     autoDetect: currentConfig.autoDetect ?? true,
     generateTypes: currentConfig.generateTypes ?? false,
