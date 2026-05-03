@@ -9,7 +9,9 @@
  */
 
 import type { I18nPluginOptions, Language } from '../types';
-import { getConfig } from './config';
+import { getConfig, updateConfig } from './config';
+import { getPathLanguage, matchSupportedLanguage } from './routing';
+import { getLocalizedPath } from './seo';
 import { populateClientCache } from './translate';
 
 /**
@@ -20,13 +22,84 @@ import { populateClientCache } from './translate';
  * - `__INITIAL_I18N_ALL_TRANSLATIONS__`: mapa completo de todos los idiomas
  *   para que el cliente pueda cambiar de idioma sin peticiones adicionales.
  */
-type RuntimeWindow = Window & {
+type RuntimeWindow = typeof globalThis & {
   __INITIAL_I18N_STATE__?: {
     lang?: string;
     translations?: Record<string, any>;
+    config?: Partial<I18nPluginOptions>;
   };
   __INITIAL_I18N_ALL_TRANSLATIONS__?: Record<string, Record<string, any>>;
 };
+
+interface ChangeLanguageOptions {
+  syncRoute?: boolean;
+}
+
+/**
+ * Obtiene el idioma del navegador si autoDetect está habilitado.
+ *
+ * @param localsConfig - Configuración local de Astro.
+ * @param globalConfig - Configuración global del plugin.
+ * @returns Código del idioma del navegador o undefined.
+ */
+function getBrowserLanguage(
+  localsConfig: Partial<I18nPluginOptions> | undefined,
+  globalConfig: I18nPluginOptions,
+  supportedLangs: Language[],
+): Language | undefined {
+  if (!(localsConfig?.autoDetect ?? globalConfig.autoDetect)) {
+    return undefined;
+  }
+
+  const preferredLanguages =
+    Array.isArray(navigator.languages) && navigator.languages.length > 0 ? navigator.languages : [navigator.language];
+
+  for (const candidate of preferredLanguages) {
+    const match = matchSupportedLanguage(candidate, supportedLangs);
+
+    if (match) {
+      return match;
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * Obtiene el idioma desde el navegador en orden de prioridad.
+ *
+ * @param globalConfig - Configuración global del plugin.
+ * @param localsConfig - Configuración local de Astro.
+ * @returns Código del idioma o undefined si no se encuentra en el navegador.
+ */
+function getClientLanguage(
+  globalConfig: I18nPluginOptions,
+  localsConfig: Partial<I18nPluginOptions> | undefined,
+): Language | undefined {
+  if (typeof document === 'undefined') {
+    return undefined;
+  }
+
+  // Prioridad 1: atributo lang del elemento raíz (puesto por changeLanguage).
+  const docLang = document.documentElement.getAttribute('lang');
+  if (docLang) {
+    return docLang;
+  }
+
+  // Prioridad 2: preferencia guardada por el usuario en una sesión anterior.
+  if (typeof localStorage !== 'undefined') {
+    const storedLang = localStorage.getItem('language') || localStorage.getItem('lang');
+    if (storedLang) {
+      return storedLang;
+    }
+  }
+
+  // Prioridad 3: detección automática por navigator.language (solo si autoDetect).
+  const supportedLangs = localsConfig?.supportedLangs?.length
+    ? localsConfig.supportedLangs
+    : (globalConfig.supportedLangs ?? []);
+  return getBrowserLanguage(localsConfig, globalConfig, supportedLangs);
+}
 
 /**
  * Devuelve el idioma actualmente activo.
@@ -39,7 +112,14 @@ type RuntimeWindow = Window & {
  * @returns Código del idioma activo.
  */
 export function getCurrentLanguage(locals?: Record<string, any>): Language {
-  // En SSR el idioma lo determina la configuración inyectada por el middleware.
+  // En SSR el middleware puede resolver el idioma por request y publicarlo en locals.
+  const localsLang = locals?.i18n?.lang as Language | undefined;
+
+  if (localsLang) {
+    return localsLang;
+  }
+
+  // Fallback SSR: usar configuración inyectada por middleware.
   const localsConfig = locals?.i18n?.config as Partial<I18nPluginOptions> | undefined;
 
   if (localsConfig?.defaultLang) {
@@ -48,28 +128,9 @@ export function getCurrentLanguage(locals?: Record<string, any>): Language {
 
   const globalConfig = getConfig();
 
-  if (typeof document !== 'undefined') {
-    // Prioridad 1: atributo lang del elemento raíz (puesto por changeLanguage).
-    const docLang = document.documentElement.getAttribute('lang');
-    if (docLang) {
-      return docLang as Language;
-    }
-
-    // Prioridad 2: preferencia guardada por el usuario en una sesión anterior.
-    if (typeof localStorage !== 'undefined') {
-      const storedLang = localStorage.getItem('language') || localStorage.getItem('lang');
-      if (storedLang) {
-        return storedLang as Language;
-      }
-    }
-
-    // Prioridad 3: detección automática por navigator.language (solo si autoDetect).
-    if (localsConfig?.autoDetect ?? globalConfig.autoDetect) {
-      const browserLang = navigator.language.split('-')[0];
-      if (browserLang) {
-        return browserLang as Language;
-      }
-    }
+  const clientLang = getClientLanguage(globalConfig, localsConfig);
+  if (clientLang) {
+    return clientLang;
   }
 
   const defaultLang = localsConfig?.defaultLang || globalConfig.defaultLang || 'es';
@@ -82,6 +143,44 @@ export function getCurrentLanguage(locals?: Record<string, any>): Language {
 }
 
 /**
+ * Sincroniza la URL del navegador cuando cambia el idioma activo.
+ *
+ * Esta función es browser-safe y se utiliza internamente en `changeLanguage()`
+ * cuando `syncRoute` es verdadero (default). También puede usarse directamente
+ * si se requiere control manual sobre cuándo sincronizar la ruta.
+ *
+ * Si la estrategia de routing es 'manual', no hace nada.
+ *
+ * @param lang - Idioma al cual sincronizar la ruta.
+ */
+export function syncLanguageRoute(lang: Language): void {
+  if (globalThis.window === undefined) {
+    return;
+  }
+
+  const config = getConfig();
+  const routing = config.routing ?? {
+    strategy: 'manual',
+    prefixDefaultLocale: false,
+    redirectToDefaultLocale: false,
+  };
+
+  if (routing.strategy === 'manual') {
+    return;
+  }
+
+  const nextPathname = getLocalizedPath(globalThis.window.location.pathname, lang, config);
+  const nextUrl = new URL(globalThis.window.location.href);
+  nextUrl.pathname = nextPathname;
+
+  if (nextUrl.toString() === globalThis.window.location.href) {
+    return;
+  }
+
+  globalThis.window.history.pushState({ i18n: { lang } }, '', nextUrl.toString());
+}
+
+/**
  * Cambia el idioma activo de la aplicación.
  *
  * Actualiza el atributo `lang` del `<html>`, persiste la preferencia en
@@ -90,8 +189,9 @@ export function getCurrentLanguage(locals?: Record<string, any>): Language {
  * puedan reaccionar y re-renderizar los componentes afectados.
  *
  * @param lang - Código del idioma al que se cambia.
+ * @param options - Opciones para cambiar el idioma.
  */
-export function changeLanguage(lang: Language): void {
+export function changeLanguage(lang: Language, options: ChangeLanguageOptions = {}): void {
   // No-op en SSR; este módulo opera únicamente en el navegador.
   if (typeof document === 'undefined') {
     return;
@@ -104,7 +204,77 @@ export function changeLanguage(lang: Language): void {
     localStorage.setItem('lang', lang);
   }
 
+  if (options.syncRoute ?? true) {
+    syncLanguageRoute(lang);
+  }
+
   document.dispatchEvent(new CustomEvent('languagechange', { detail: { language: lang } }));
+}
+
+/**
+ * Resuelve el idioma desde el estado SSR e hidrata la caché si es necesario.
+ *
+ * @param initialState - Estado inicial inyectado por el servidor.
+ * @returns Idioma resuelto desde el estado SSR o undefined.
+ */
+function resolveInitialLanguage(
+  initialState: RuntimeWindow['__INITIAL_I18N_STATE__'] | undefined,
+): Language | undefined {
+  if (!initialState?.lang) {
+    return undefined;
+  }
+
+  if (initialState.translations) {
+    populateClientCache(initialState.lang, initialState.translations);
+  }
+
+  return initialState.lang;
+}
+
+/**
+ * Resuelve el idioma guardado en localStorage si es válido.
+ *
+ * @param supportedLangs - Lista de idiomas soportados.
+ * @returns Idioma resuelto desde localStorage o undefined.
+ */
+function resolveStoredLanguage(supportedLangs: Language[]): Language | undefined {
+  if (typeof localStorage === 'undefined') {
+    return undefined;
+  }
+
+  const storedLang = localStorage.getItem('language') || localStorage.getItem('lang');
+  if (storedLang && supportedLangs.includes(storedLang)) {
+    return storedLang;
+  }
+
+  return undefined;
+}
+
+/**
+ * Resuelve el idioma detectado del navegador si autoDetect está habilitado.
+ *
+ * @param config - Configuración global del plugin.
+ * @param supportedLangs - Lista de idiomas soportados.
+ * @param hasInitial - Si ya hay un idioma inicial resuelto.
+ * @param hasStored - Si ya hay un idioma guardado resuelto.
+ * @returns Idioma resuelto desde el navegador o undefined.
+ */
+function resolveBrowserLanguage(
+  config: I18nPluginOptions,
+  supportedLangs: Language[],
+  hasInitial: boolean,
+  hasStored: boolean,
+): Language | undefined {
+  if (hasInitial || hasStored || !config.autoDetect) {
+    return undefined;
+  }
+
+  const browserLang = navigator.language.split('-')[0];
+  if (supportedLangs.includes(browserLang)) {
+    return browserLang;
+  }
+
+  return undefined;
 }
 
 /**
@@ -123,16 +293,17 @@ export function changeLanguage(lang: Language): void {
  * - El idioma del servidor nunca sea sobrescrito silenciosamente al hidratar.
  */
 export function setupLanguage(): void {
-  if (typeof window === 'undefined' || typeof document === 'undefined') {
+  if (typeof globalThis === 'undefined' || globalThis.document === undefined) {
     return;
   }
 
-  const runtimeWindow = window as RuntimeWindow;
+  const runtimeWindow = globalThis as RuntimeWindow;
   const config = getConfig();
 
   // Si el servidor inyectó todas las traducciones, usamos sus claves como
   // lista de idiomas soportados en caso de que la config del cliente no la tenga.
   const initialState = runtimeWindow.__INITIAL_I18N_STATE__;
+  updateConfig(initialState?.config || {});
   const initialSupportedLangs = runtimeWindow.__INITIAL_I18N_ALL_TRANSLATIONS__
     ? Object.keys(runtimeWindow.__INITIAL_I18N_ALL_TRANSLATIONS__)
     : [];
@@ -148,43 +319,14 @@ export function setupLanguage(): void {
   // El fallback final es el idioma SSR → primer idioma soportado → config → "en".
   const fallbackDefaultLang = initialState?.lang || supportedLangs[0] || config.defaultLang || 'en';
 
-  let language = fallbackDefaultLang as Language;
-  let hasStoredLang = false;
+  // Resolvemos el idioma según la prioridad establecida.
+  const initialLang = resolveInitialLanguage(initialState);
+  const storedLang = resolveStoredLanguage(supportedLangs);
+  const browserLang = resolveBrowserLanguage(config, supportedLangs, !!initialLang, !!storedLang);
 
-  // Paso 1: si el servidor ya eligió un idioma (y opcionalmente preparó las
-  // traducciones), lo tomamos como punto de partida para la hidratación.
-  if (initialState?.lang) {
-    language = initialState.lang as Language;
+  const language = initialLang || storedLang || browserLang || fallbackDefaultLang;
 
-    if (initialState.translations) {
-      // Hidratamos la caché del cliente con las traducciones server-side para
-      // que t() funcione de inmediato sin peticiones adicionales.
-      populateClientCache(language, initialState.translations);
-    }
-  }
-
-  // Paso 2: si el usuario ya eligió un idioma en una visita anterior y lo guardó
-  // en localStorage, respetamos su preferencia (solo si es un idioma válido).
-  if (typeof localStorage !== 'undefined') {
-    const storedLang = localStorage.getItem('language') || localStorage.getItem('lang');
-
-    if (storedLang && supportedLangs.includes(storedLang)) {
-      language = storedLang as Language;
-      hasStoredLang = true;
-    }
-  }
-
-  // Paso 3: autoDetect aplica únicamente cuando no hay ni estado SSR ni preferencia
-  // guardada, es decir, en una primera visita real sin ningún contexto previo.
-  if (!hasStoredLang && !initialState?.lang && config.autoDetect) {
-    const browserLang = navigator.language.split('-')[0];
-
-    if (supportedLangs.includes(browserLang)) {
-      language = browserLang as Language;
-    }
-  }
-
-  changeLanguage(language);
+  changeLanguage(language, { syncRoute: false });
 }
 
 /**
@@ -208,11 +350,11 @@ export function setupLanguage(): void {
  * ```
  */
 export function bootstrapClientI18n(): void {
-  if (typeof window === 'undefined') {
+  if (typeof globalThis === 'undefined' || globalThis.document === undefined) {
     return;
   }
 
-  const runtimeWindow = window as RuntimeWindow;
+  const runtimeWindow = globalThis as RuntimeWindow;
 
   // Hidratamos toda la caché antes de llamar a setupLanguage, ya que
   // este último puede necesitar las traducciones para el render inicial.
@@ -223,6 +365,17 @@ export function bootstrapClientI18n(): void {
   }
 
   setupLanguage();
+
+  globalThis.window.addEventListener('popstate', () => {
+    const config = getConfig();
+    const supportedLangs =
+      config.supportedLangs && config.supportedLangs.length > 0 ? config.supportedLangs : [config.defaultLang || 'en'];
+    const pathLang = getPathLanguage(globalThis.window.location.pathname, supportedLangs);
+
+    if (pathLang) {
+      changeLanguage(pathLang, { syncRoute: false });
+    }
+  });
 
   // Notificamos que el sistema está listo. Los listeners con `{ once: true }`
   // en los componentes pueden activar el render en este punto.
@@ -252,7 +405,7 @@ export function setupLanguageObserver(callback: (lang: Language) => void): () =>
 
   const handleChange = (event: Event) => {
     const customEvent = event as CustomEvent;
-    if (customEvent.detail && customEvent.detail.language) {
+    if (customEvent.detail?.language) {
       callback(customEvent.detail.language);
     }
   };

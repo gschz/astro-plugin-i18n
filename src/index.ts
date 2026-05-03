@@ -31,6 +31,7 @@ export {
   getCurrentLanguage,
   setupLanguage,
   setupLanguageObserver,
+  syncLanguageRoute,
 } from './core/language';
 
 // ── Configuración ──────────────────────────────────────────────────────────
@@ -58,6 +59,9 @@ export {
   isLanguageSupported,
   reloadTranslations,
 } from './core/setup';
+
+// ── SEO multilingüe ────────────────────────────────────────────────────────
+export { getAlternateLinks, getLocalizedPath, getXDefaultHref } from './core/seo';
 
 // ── Componentes ────────────────────────────────────────────────────────────
 export { LangToggle } from './components/LangToggle';

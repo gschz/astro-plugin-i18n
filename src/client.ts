@@ -22,6 +22,7 @@ export {
   getCurrentLanguage,
   setupLanguage,
   setupLanguageObserver,
+  syncLanguageRoute,
 } from './core/language';
 
 export { populateClientCache, t, useTranslation } from './core/translate';
