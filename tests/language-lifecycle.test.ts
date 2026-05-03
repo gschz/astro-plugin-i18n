@@ -23,6 +23,14 @@ function clearClientCache(): void {
 
 describe('language lifecycle', () => {
   beforeEach(() => {
+    const browserWindow = globalThis as unknown as Window & {
+      __INITIAL_I18N_STATE__?: {
+        lang?: string;
+        translations?: Record<string, any>;
+      };
+      __INITIAL_I18N_ALL_TRANSLATIONS__?: Record<string, Record<string, any>>;
+    };
+
     resetConfig();
     initConfig({
       defaultLang: 'es',
@@ -31,18 +39,10 @@ describe('language lifecycle', () => {
     });
 
     clearClientCache();
-    localStorage.clear();
+    browserWindow.localStorage.clear();
     document.documentElement.removeAttribute('lang');
 
-    const runtimeWindow = window as Window & {
-      __INITIAL_I18N_STATE__?: {
-        lang?: string;
-        translations?: Record<string, any>;
-      };
-      __INITIAL_I18N_ALL_TRANSLATIONS__?: Record<string, Record<string, any>>;
-    };
-
-    runtimeWindow.__INITIAL_I18N_STATE__ = {
+    browserWindow.__INITIAL_I18N_STATE__ = {
       lang: 'es',
       translations: {
         demo: {
@@ -51,7 +51,7 @@ describe('language lifecycle', () => {
       },
     };
 
-    runtimeWindow.__INITIAL_I18N_ALL_TRANSLATIONS__ = {
+    browserWindow.__INITIAL_I18N_ALL_TRANSLATIONS__ = {
       es: {
         demo: {
           title: 'Titulo ES',
@@ -63,6 +63,33 @@ describe('language lifecycle', () => {
         },
       },
     };
+  });
+
+  it('prefiere navigator.languages cuando no hay estado SSR ni preferencia guardada', () => {
+    initConfig({
+      defaultLang: 'es',
+      supportedLangs: ['es', 'en', 'pt-BR'],
+      autoDetect: true,
+    });
+
+    const browserWindow = globalThis as unknown as Window & {
+      __INITIAL_I18N_STATE__?: {
+        lang?: string;
+        translations?: Record<string, any>;
+      };
+    };
+
+    browserWindow.__INITIAL_I18N_STATE__ = undefined;
+    browserWindow.localStorage.clear();
+    document.documentElement.removeAttribute('lang');
+
+    vi.spyOn(browserWindow.navigator, 'languages', 'get').mockReturnValue([
+      'pt-BR',
+      'en-US',
+    ] as unknown as readonly string[]);
+    vi.spyOn(browserWindow.navigator, 'language', 'get').mockReturnValue('pt-BR');
+
+    expect(getCurrentLanguage()).toBe('pt-BR');
   });
 
   it('bootstrapClientI18n hidrata cache y emite i18nready', () => {
@@ -77,28 +104,65 @@ describe('language lifecycle', () => {
   });
 
   it('changeLanguage actualiza html, localStorage y notifica observers', () => {
+    initConfig({
+      defaultLang: 'es',
+      supportedLangs: ['es', 'en', 'pt-BR'],
+      routing: {
+        strategy: 'prefix-except-default',
+        prefixDefaultLocale: false,
+        redirectToDefaultLocale: true,
+      },
+    });
+
+    const browserWindow = globalThis as unknown as Window;
+
+    browserWindow.history.replaceState({}, '', '/en/');
     bootstrapClientI18n();
 
     const observerSpy = vi.fn();
     const unsubscribe = setupLanguageObserver(observerSpy);
 
-    changeLanguage('en');
+    changeLanguage('pt-BR');
 
-    expect(document.documentElement.lang).toBe('en');
-    expect(localStorage.getItem('language')).toBe('en');
-    expect(localStorage.getItem('lang')).toBe('en');
-    expect(observerSpy).toHaveBeenCalledWith('en');
-    expect(t('demo.title')).toBe('Title EN');
+    expect(browserWindow.location.pathname).toBe('/pt-BR/');
+    expect(document.documentElement.lang).toBe('pt-BR');
+    expect(browserWindow.localStorage.getItem('language')).toBe('pt-BR');
+    expect(browserWindow.localStorage.getItem('lang')).toBe('pt-BR');
+    expect(observerSpy).toHaveBeenCalledWith('pt-BR');
+    expect(t('demo.title')).toBe('demo.title');
 
     unsubscribe();
   });
 
   it('prioriza idioma persistido cuando es soportado', () => {
-    localStorage.setItem('language', 'en');
+    const browserWindow = globalThis as unknown as Window & {
+      __INITIAL_I18N_STATE__?: {
+        lang?: string;
+        translations?: Record<string, any>;
+      };
+    };
+
+    browserWindow.__INITIAL_I18N_STATE__ = undefined;
+
+    browserWindow.localStorage.setItem('language', 'en');
 
     bootstrapClientI18n();
 
     expect(getCurrentLanguage()).toBe('en');
     expect(t('demo.title')).toBe('Title EN');
+  });
+
+  it('en SSR prioriza locals.i18n.lang sobre defaultLang en config', () => {
+    const ssrLocals = {
+      i18n: {
+        lang: 'en',
+        config: {
+          defaultLang: 'es',
+          supportedLangs: ['es', 'en'],
+        },
+      },
+    };
+
+    expect(getCurrentLanguage(ssrLocals)).toBe('en');
   });
 });

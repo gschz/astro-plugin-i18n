@@ -97,4 +97,64 @@ describe('translations core', () => {
     await expect(getTranslation('demo.missing', 'es')).resolves.toBe('[MISSING: demo.missing]');
     expect(errorSpy).toHaveBeenCalled();
   });
+
+  it('aplica fallback de idioma antes de missingKeyStrategy', async () => {
+    const tmp = createTempDir();
+
+    writeJson(path.join(tmp, 'es.json'), {
+      demo: {
+        title: 'Titulo ES',
+      },
+    });
+
+    writeJson(path.join(tmp, 'pt-BR.json'), {
+      demo: {
+        title: 'Titulo PT',
+      },
+    });
+
+    initConfig({
+      defaultLang: 'es',
+      supportedLangs: ['es', 'pt-BR', 'fr'],
+      translationsDir: tmp,
+      missingKeyStrategy: 'key',
+      fallback: {
+        fr: 'pt-BR',
+        'pt-BR': 'es',
+      },
+    });
+
+    await expect(getTranslation('demo.title', 'fr')).resolves.toBe('Titulo PT');
+    await expect(getTranslation('demo.unknown', 'fr')).resolves.toBe('demo.unknown');
+  });
+
+  it('evita ciclos en cadena de fallback y aplica missingKeyStrategy', async () => {
+    const tmp = createTempDir();
+
+    writeJson(path.join(tmp, 'fr.json'), {
+      demo: {
+        title: 'Titre FR',
+      },
+    });
+
+    writeJson(path.join(tmp, 'pt-BR.json'), {
+      demo: {
+        title: 'Titulo PT',
+      },
+    });
+
+    initConfig({
+      defaultLang: 'fr',
+      supportedLangs: ['fr', 'pt-BR'],
+      translationsDir: tmp,
+      missingKeyStrategy: 'key',
+      fallback: {
+        fr: 'pt-BR',
+        'pt-BR': 'fr',
+      },
+    });
+
+    await expect(getTranslation('demo.title', 'fr')).resolves.toBe('Titre FR');
+    await expect(getTranslation('demo.missing', 'fr')).resolves.toBe('demo.missing');
+  });
 });

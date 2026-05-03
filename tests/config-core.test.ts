@@ -18,6 +18,11 @@ describe('config core', () => {
 
     expect(config.defaultLang).toBe('en');
     expect(config.supportedLangs).toEqual(['en']);
+    expect(config.routing).toEqual({
+      strategy: 'manual',
+      prefixDefaultLocale: false,
+      redirectToDefaultLocale: false,
+    });
     expect(config.translationsDir).toBe('./src/i18n');
     expect(config.autoDetect).toBe(true);
     expect(config.generateTypes).toBe(false);
@@ -30,6 +35,9 @@ describe('config core', () => {
       defaultLang: 'es',
       supportedLangs: ['es', 'en'],
       missingKeyStrategy: 'empty',
+      routing: {
+        strategy: 'prefix',
+      },
     });
 
     updateConfig({ missingKeyStrategy: 'error', autoDetect: false });
@@ -38,6 +46,11 @@ describe('config core', () => {
 
     expect(config.defaultLang).toBe('es');
     expect(config.supportedLangs).toEqual(['es', 'en']);
+    expect(config.routing).toEqual({
+      strategy: 'prefix',
+      prefixDefaultLocale: true,
+      redirectToDefaultLocale: true,
+    });
     expect(config.missingKeyStrategy).toBe('error');
     expect(config.autoDetect).toBe(false);
   });
