@@ -63,6 +63,24 @@ export interface TranslationOptions {
   lang?: Language;
 }
 
+/** Configuracion opcional de namespaces para dividir archivos de traduccion. */
+export interface I18nNamespacesOptions {
+  /** Activa el modo namespaces. Si es `false`, usa un solo JSON por idioma. */
+  enabled?: boolean;
+  /** Namespace por defecto cuando la key no incluye separador. */
+  defaultNamespace?: string;
+  /** Separador entre namespace y key (por defecto `:`). */
+  separator?: string;
+}
+
+/** Configuracion opcional de pluralizacion para resolver claves por categoria. */
+export interface I18nPluralizationOptions {
+  /** Activa la pluralizacion automatica. Por defecto `true`. */
+  enabled?: boolean;
+  /** Campo dentro de `values` que contiene el contador (por defecto `count`). */
+  field?: string;
+}
+
 /** Estrategias de enrutado multilingüe soportadas por el plugin. */
 export type I18nRoutingStrategy = 'manual' | 'prefix' | 'prefix-except-default';
 
@@ -119,6 +137,10 @@ export interface TranslationConfig {
    * - `"error"`: imprime error en consola y devuelve `[MISSING: key]`.
    */
   missingKeyStrategy?: 'key' | 'empty' | 'error';
+  /** Opciones para namespaces (multiples archivos por idioma). */
+  namespaces?: I18nNamespacesOptions;
+  /** Opciones para pluralizacion basada en Intl.PluralRules. */
+  pluralization?: I18nPluralizationOptions;
 }
 
 /** Alias de {@link TranslationConfig} expuesto como nombre de opción pública. */

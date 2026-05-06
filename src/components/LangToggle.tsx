@@ -8,7 +8,7 @@ interface LangToggleProps {
   /** Clase CSS adicional para el contenedor raíz del dropdown. */
   className?: string;
   /** Lista de idiomas seleccionables con código y etiqueta visible. */
-  languages: Array<{
+  languages: ReadonlyArray<{
     /** Código de idioma (ej: en, es, pt-BR). */
     code: Language;
     /** Etiqueta mostrada al usuario para el idioma. */
@@ -22,8 +22,8 @@ interface LangToggleProps {
  * Dropdown de idiomas para aplicaciones React.
  *
  * Sincroniza su estado con el idioma global del plugin y permite cambiarlo
- * disparando `changeLanguage`, lo que a su vez actualiza `localStorage`, el
- * atributo `lang` del documento y los observers registrados.
+ * disparando `changeLanguage` y `syncLanguageRoute`, de forma que el idioma
+ * activo, la URL localizada y los observers registrados queden alineados.
  */
 export const LangToggle: React.FC<LangToggleProps> = ({ className = '', languages, currentLang }) => {
   const { language, changeLanguage } = useTranslation();

@@ -24,6 +24,15 @@ describe('config core', () => {
       redirectToDefaultLocale: false,
     });
     expect(config.translationsDir).toBe('./src/i18n');
+    expect(config.namespaces).toEqual({
+      enabled: undefined,
+      defaultNamespace: 'common',
+      separator: ':',
+    });
+    expect(config.pluralization).toEqual({
+      enabled: true,
+      field: 'count',
+    });
     expect(config.autoDetect).toBe(true);
     expect(config.generateTypes).toBe(false);
     expect(config.typesOutputPath).toBe('./src/types/i18n-types.d.ts');

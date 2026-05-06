@@ -23,6 +23,14 @@ const defaultConfig: TranslationConfig = {
     redirectToDefaultLocale: false,
   },
   translationsDir: './src/i18n',
+  namespaces: {
+    defaultNamespace: 'common',
+    separator: ':',
+  },
+  pluralization: {
+    enabled: true,
+    field: 'count',
+  },
   autoDetect: true,
   generateTypes: false,
   typesOutputPath: './src/types/i18n-types.d.ts',
@@ -31,6 +39,39 @@ const defaultConfig: TranslationConfig = {
 
 /** Estado mutable del singleton. Se empieza con los valores por defecto. */
 let config: TranslationConfig = { ...defaultConfig };
+
+/** Indica si el singleton fue inicializado en este proceso. */
+let isConfigInitialized = false;
+
+type RuntimeGlobal = typeof globalThis & {
+  __ASTRO_I18N_OPTIONS__?: Partial<I18nPluginOptions>;
+  __INITIAL_I18N_STATE__?: {
+    config?: Partial<I18nPluginOptions>;
+  };
+};
+
+/**
+ * Hidrata la configuracion desde `globalThis.__ASTRO_I18N_OPTIONS__` o
+ * `globalThis.__INITIAL_I18N_STATE__.config` cuando este modulo se ejecuta
+ * en un runtime aislado (ej. Isla de React) y aun no se inicializo.
+ */
+function hydrateConfigFromGlobal(): void {
+  if (isConfigInitialized || typeof globalThis === 'undefined') {
+    return;
+  }
+
+  try {
+    const runtimeGlobal = globalThis as RuntimeGlobal;
+    const globalOptions = runtimeGlobal.__ASTRO_I18N_OPTIONS__ ?? runtimeGlobal.__INITIAL_I18N_STATE__?.config;
+
+    if (globalOptions) {
+      config = { ...defaultConfig, ...globalOptions };
+      isConfigInitialized = true;
+    }
+  } catch {
+    // Ignoramos errores en entornos donde globalThis no es accesible.
+  }
+}
 
 /**
  * Devuelve la configuración activa con todos los campos normalizados.
@@ -43,6 +84,7 @@ let config: TranslationConfig = { ...defaultConfig };
  * @returns Configuración completa con valores garantizados.
  */
 export function getConfig(): TranslationConfig {
+  hydrateConfigFromGlobal();
   const currentConfig = config;
 
   // Si supportedLangs no fue configurado, el fallback mínimo es inglés para
@@ -52,12 +94,25 @@ export function getConfig(): TranslationConfig {
 
   const normalizedRouting = normalizeRoutingOptions(currentConfig.routing);
 
+  const normalizedNamespaces = {
+    enabled: currentConfig.namespaces?.enabled,
+    defaultNamespace: currentConfig.namespaces?.defaultNamespace ?? 'common',
+    separator: currentConfig.namespaces?.separator ?? ':',
+  };
+
+  const normalizedPluralization = {
+    enabled: currentConfig.pluralization?.enabled ?? true,
+    field: currentConfig.pluralization?.field ?? 'count',
+  };
+
   return {
     ...currentConfig,
     defaultLang: currentConfig.defaultLang ?? 'en',
     supportedLangs: normalizedSupportedLangs,
     routing: normalizedRouting,
     translationsDir: currentConfig.translationsDir ?? './src/i18n',
+    namespaces: normalizedNamespaces,
+    pluralization: normalizedPluralization,
     autoDetect: currentConfig.autoDetect ?? true,
     generateTypes: currentConfig.generateTypes ?? false,
     typesOutputPath: currentConfig.typesOutputPath ?? './src/types/i18n-types.d.ts',
@@ -78,6 +133,8 @@ export function updateConfig(options: Partial<I18nPluginOptions> = {}): Translat
     ...options,
   };
 
+  isConfigInitialized = true;
+
   return { ...config };
 }
 
@@ -89,6 +146,7 @@ export function updateConfig(options: Partial<I18nPluginOptions> = {}): Translat
  */
 export function resetConfig(): TranslationConfig {
   config = { ...defaultConfig };
+  isConfigInitialized = false;
   return { ...config };
 }
 
@@ -102,6 +160,7 @@ export function resetConfig(): TranslationConfig {
  */
 export function initConfig(options: Partial<I18nPluginOptions> = {}): TranslationConfig {
   config = { ...defaultConfig, ...options };
+  isConfigInitialized = true;
   return { ...config };
 }
 

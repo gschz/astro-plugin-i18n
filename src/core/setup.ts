@@ -85,7 +85,6 @@ export function getLanguageRedirect(url: URL): URL | null {
  *   `window.__INITIAL_I18N_ALL_TRANSLATIONS__`.
  */
 export async function getI18nClientBootstrapPayload(locals?: Record<string, any>): Promise<I18nClientBootstrapPayload> {
-  const config = getConfig();
   const lang = getCurrentLanguage(locals);
   const translations = await getTranslationsForLanguage(lang);
 
@@ -98,6 +97,8 @@ export async function getI18nClientBootstrapPayload(locals?: Record<string, any>
       supportedLangs.map(async (supportedLang) => [supportedLang, await getTranslationsForLanguage(supportedLang)]),
     ),
   ) as Record<Language, Record<string, any>>;
+
+  const config = getConfig();
 
   return {
     lang,

@@ -7,9 +7,10 @@
  */
 
 import { useEffect, useState } from 'react';
-import type { Language, TranslationKey, TranslationOptions } from '../types';
+import type { Language, TranslationKey, TranslationOptions, TranslationValues } from '../types';
 import { getConfig } from './config';
 import { changeLanguage, getCurrentLanguage, setupLanguageObserver } from './language';
+import { resolvePluralKey } from './pluralization';
 
 type RuntimeGlobal = typeof globalThis & {
   __ASTRO_I18N_CLIENT_TRANSLATIONS_CACHE__?: Record<string, string>;
@@ -68,7 +69,30 @@ export function populateClientCache(lang: Language, translations: Record<string,
     );
   };
 
-  const flatTranslations = flattenTranslations(translations);
+  const config = getConfig();
+  const namespaceConfig = config.namespaces;
+  const separator = namespaceConfig?.separator ?? ':';
+  const useNamespaces = namespaceConfig?.enabled === true;
+
+  if (useNamespaces) {
+    const entries = Object.entries(translations || {});
+    const looksNamespaced =
+      entries.length > 0 && entries.every(([, value]) => typeof value === 'object' && value !== null);
+
+    if (looksNamespaced) {
+      for (const [namespace, namespaceTranslations] of entries) {
+        const flatTranslations = flattenTranslations(namespaceTranslations as Record<string, any>);
+
+        for (const key in flatTranslations) {
+          clientTranslationsCache[`${lang}:${namespace}${separator}${key}`] = flatTranslations[key];
+        }
+      }
+
+      return;
+    }
+  }
+
+  const flatTranslations = flattenTranslations(translations || {});
 
   // Escribimos en la caché global usando el formato "lang:key".
   for (const key in flatTranslations) {
@@ -89,11 +113,16 @@ export function populateClientCache(lang: Language, translations: Record<string,
  */
 export async function translateAsync(key: TranslationKey, options?: TranslationOptions): Promise<string> {
   const lang = options?.lang || getCurrentLanguage();
+  const config = getConfig();
+  const rawKey = String(key);
+  const pluralKey = resolvePluralKeyFromValues(rawKey, lang, options?.values, config);
 
   // Importación dinámica para evitar que Vite incluya módulos de Node.js
   // (fs, path) en el bundle del cliente cuando se usa el entrypoint /client.
-  const { getTranslation } = await import('./translations');
-  let translation = await getTranslation(key, lang);
+  const { getTranslation, getTranslationValue } = await import('./translations');
+  let translation = pluralKey ? await getTranslationValue(pluralKey, lang) : null;
+
+  translation ??= await getTranslation(rawKey, lang);
 
   if (options?.values) {
     translation = applyVariables(translation, options.values);
@@ -119,34 +148,142 @@ export async function translateAsync(key: TranslationKey, options?: TranslationO
  * @returns Cadena traducida o valor de sustitución.
  */
 export function t(key: TranslationKey, options?: TranslationOptions): string {
-  const lang = options?.lang || getCurrentLanguage();
-  const cacheKey = `${lang}:${key}`;
   const config = getConfig();
+  const lang = options?.lang || getCurrentLanguage();
+  const rawKey = String(key);
+  const normalizedKey = normalizeTranslationKey(rawKey, config);
+  const pluralKey = resolvePluralKeyFromValues(normalizedKey, lang, options?.values, config);
 
-  if (clientTranslationsCache[cacheKey] !== undefined) {
-    const translation = clientTranslationsCache[cacheKey];
-    return options?.values ? applyVariables(translation, options.values) : translation;
+  const resolved = resolveTranslation(normalizedKey, pluralKey, lang, config);
+
+  if (resolved !== null) {
+    return applyIfValues(resolved, options?.values);
   }
 
-  const fallbackTranslation = resolveFallbackTranslation(String(key), lang, config.fallback, new Set([lang]));
+  return applyMissingKeyStrategy(rawKey, key, lang, options?.values, config.missingKeyStrategy);
+}
 
-  if (fallbackTranslation !== null) {
-    return options?.values ? applyVariables(fallbackTranslation, options.values) : fallbackTranslation;
+/**
+ * Busca la traduccion en la cache y en idiomas de fallback, en orden de prioridad:
+ * plural cache → base cache → fallback plural → fallback base.
+ *
+ * @returns La cadena traducida, o `null` si no se encontró ninguna.
+ */
+function resolveTranslation(
+  normalizedKey: string,
+  pluralKey: string | null,
+  lang: Language,
+  config: ReturnType<typeof getConfig>,
+): string | null {
+  if (pluralKey) {
+    const fromPluralCache = clientTranslationsCache[`${lang}:${pluralKey}`];
+    if (fromPluralCache !== undefined) return fromPluralCache;
   }
 
-  switch (config.missingKeyStrategy) {
-    case 'empty':
-      return '';
-    case 'error':
-      console.error(`[i18n] Clave de traducción faltante (cliente): "${key}" en idioma "${lang}"`);
-      return `[MISSING: ${key}]`;
-    case 'key':
-    default: {
-      // Devolvemos la clave para que sea visible en UI sin romper el render.
-      const keyString = String(key);
-      return options?.values ? applyVariables(keyString, options.values) : keyString;
-    }
+  const fromBaseCache = clientTranslationsCache[`${lang}:${normalizedKey}`];
+  if (fromBaseCache !== undefined) return fromBaseCache;
+
+  const visited = new Set([lang]);
+
+  if (pluralKey) {
+    const fromPluralFallback = resolveFallbackTranslation(pluralKey, lang, config.fallback, visited);
+    if (fromPluralFallback !== null) return fromPluralFallback;
   }
+
+  return resolveFallbackTranslation(normalizedKey, lang, config.fallback, visited);
+}
+
+/**
+ * Aplica `applyVariables` solo si `values` está definido.
+ */
+function applyIfValues(text: string, values: TranslationValues | undefined): string {
+  return values ? applyVariables(text, values) : text;
+}
+
+/**
+ * Aplica la estrategia configurada para claves no encontradas.
+ */
+function applyMissingKeyStrategy(
+  rawKey: string,
+  originalKey: TranslationKey,
+  lang: Language,
+  values: TranslationValues | undefined,
+  strategy: ReturnType<typeof getConfig>['missingKeyStrategy'],
+): string {
+  if (strategy === 'empty') return '';
+
+  if (strategy === 'error') {
+    console.error(`[i18n] Clave de traducción faltante (cliente): "${originalKey}" en idioma "${lang}"`);
+    return `[MISSING: ${originalKey}]`;
+  }
+
+  // strategy === 'key' (default): visible en UI sin romper el render.
+  return applyIfValues(rawKey, values);
+}
+
+/**
+ * Normaliza una clave aplicando el namespace por defecto cuando corresponde.
+ *
+ * @param rawKey - Clave original.
+ * @param config - Configuracion i18n normalizada.
+ * @returns Clave lista para busqueda en cache.
+ */
+function normalizeTranslationKey(rawKey: string, config: ReturnType<typeof getConfig>): string {
+  const namespaceConfig = config.namespaces;
+
+  if (!namespaceConfig?.enabled) {
+    return rawKey;
+  }
+
+  const separator = namespaceConfig.separator ?? ':';
+
+  if (rawKey.includes(separator)) {
+    return rawKey;
+  }
+
+  const defaultNamespace = namespaceConfig.defaultNamespace ?? 'common';
+  return `${defaultNamespace}${separator}${rawKey}`;
+}
+
+/**
+ * Resuelve la clave plural basada en `values` y configuracion de pluralizacion.
+ *
+ * @param baseKey - Clave normalizada.
+ * @param lang - Idioma activo.
+ * @param values - Valores de interpolacion.
+ * @param config - Configuracion i18n normalizada.
+ * @returns Clave plural o `null` si no aplica.
+ */
+function resolvePluralKeyFromValues(
+  baseKey: string,
+  lang: Language,
+  values: TranslationValues | undefined,
+  config: ReturnType<typeof getConfig>,
+): string | null {
+  if (!values) {
+    return null;
+  }
+
+  const pluralConfig = config.pluralization;
+
+  if (pluralConfig?.enabled === false) {
+    return null;
+  }
+
+  const field = pluralConfig?.field ?? 'count';
+  const rawCount = values[field];
+
+  if (rawCount === undefined || rawCount === null) {
+    return null;
+  }
+
+  const count = typeof rawCount === 'number' ? rawCount : Number(rawCount);
+
+  if (!Number.isFinite(count)) {
+    return null;
+  }
+
+  return resolvePluralKey(baseKey, count, lang);
 }
 
 /**
@@ -185,7 +322,12 @@ function escapeRegExp(str: string): string {
  * }
  * ```
  */
-export function useTranslation() {
+export function useTranslation(): {
+  language: Language;
+  changeLanguage: typeof changeLanguage;
+  /** Versión de `t` pre-vinculada al idioma activo del hook. */
+  t: (key: TranslationKey, options?: Omit<TranslationOptions, 'lang'>) => string;
+} {
   const [language, setLanguage] = useState<Language>(getCurrentLanguage());
 
   useEffect(() => {
