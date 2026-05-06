@@ -12,9 +12,19 @@
  * @module @gschz/astro-plugin-i18n/client
  */
 
-export type { AstroI18nTypeRegistry, Language, TranslationKey, TranslationOptions, TranslationValues } from './types';
+export type {
+  AstroI18nTypeRegistry,
+  I18nNamespacesOptions,
+  I18nPluralizationOptions,
+  Language,
+  TranslationKey,
+  TranslationOptions,
+  TranslationValues,
+} from './types';
 
 export { bindDataI18n, renderDataI18n } from './core/dom';
+
+export { getConfig, getSupportedLanguages } from './core/config';
 
 export {
   bootstrapClientI18n,
