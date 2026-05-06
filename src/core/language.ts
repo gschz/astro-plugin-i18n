@@ -298,12 +298,13 @@ export function setupLanguage(): void {
   }
 
   const runtimeWindow = globalThis as RuntimeWindow;
+  const initialState = runtimeWindow.__INITIAL_I18N_STATE__;
+  updateConfig(initialState?.config || {});
+
   const config = getConfig();
 
   // Si el servidor inyectó todas las traducciones, usamos sus claves como
   // lista de idiomas soportados en caso de que la config del cliente no la tenga.
-  const initialState = runtimeWindow.__INITIAL_I18N_STATE__;
-  updateConfig(initialState?.config || {});
   const initialSupportedLangs = runtimeWindow.__INITIAL_I18N_ALL_TRANSLATIONS__
     ? Object.keys(runtimeWindow.__INITIAL_I18N_ALL_TRANSLATIONS__)
     : [];
@@ -337,8 +338,9 @@ export function setupLanguage(): void {
  * 1. Hidrata la caché del cliente con **todos** los idiomas disponibles desde
  *    `window.__INITIAL_I18N_ALL_TRANSLATIONS__`, permitiendo cambios de idioma
  *    instantáneos sin peticiones de red.
- * 2. Llama a {@link setupLanguage} para determinar y aplicar el idioma correcto.
- * 3. Dispara el evento `i18nready` en `document` para notificar a los componentes
+ * 2. Hidrata la configuración desde `window.__INITIAL_I18N_STATE__.config`.
+ * 3. Llama a {@link setupLanguage} para determinar y aplicar el idioma correcto.
+ * 4. Dispara el evento `i18nready` en `document` para notificar a los componentes
  *    que pueden comenzar a renderizar texto traducido.
  *
  * @example
@@ -355,6 +357,8 @@ export function bootstrapClientI18n(): void {
   }
 
   const runtimeWindow = globalThis as RuntimeWindow;
+  const initialState = runtimeWindow.__INITIAL_I18N_STATE__;
+  updateConfig(initialState?.config || {});
 
   // Hidratamos toda la caché antes de llamar a setupLanguage, ya que
   // este último puede necesitar las traducciones para el render inicial.
