@@ -157,4 +157,34 @@ describe('translations core', () => {
     await expect(getTranslation('demo.title', 'fr')).resolves.toBe('Titre FR');
     await expect(getTranslation('demo.missing', 'fr')).resolves.toBe('demo.missing');
   });
+
+  it('resuelve namespaces y aplica defaultNamespace en servidor', async () => {
+    const tmp = createTempDir();
+
+    writeJson(path.join(tmp, 'es', 'common.json'), {
+      nav: {
+        home: 'Inicio',
+      },
+    });
+
+    writeJson(path.join(tmp, 'es', 'auth.json'), {
+      login: {
+        title: 'Ingresar',
+      },
+    });
+
+    initConfig({
+      defaultLang: 'es',
+      supportedLangs: ['es'],
+      translationsDir: tmp,
+      namespaces: {
+        enabled: true,
+        defaultNamespace: 'common',
+        separator: ':',
+      },
+    });
+
+    await expect(getTranslation('auth:login.title', 'es')).resolves.toBe('Ingresar');
+    await expect(getTranslation('nav.home', 'es')).resolves.toBe('Inicio');
+  });
 });

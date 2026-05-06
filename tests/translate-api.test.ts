@@ -87,4 +87,44 @@ describe('translate API (client cache)', () => {
 
     expect(t('demo.missing', { lang: 'fr' })).toBe('demo.missing');
   });
+
+  it('resuelve namespaces en cache cliente y usa defaultNamespace', () => {
+    updateConfig({
+      namespaces: {
+        enabled: true,
+        defaultNamespace: 'common',
+        separator: ':',
+      },
+    });
+
+    populateClientCache('es', {
+      common: {
+        nav: {
+          home: 'Inicio',
+        },
+      },
+      auth: {
+        login: {
+          title: 'Ingresar',
+        },
+      },
+    });
+
+    expect(t('nav.home')).toBe('Inicio');
+    expect(t('auth:login.title')).toBe('Ingresar');
+  });
+
+  it('resuelve pluralizacion basada en count', () => {
+    populateClientCache('es', {
+      items: {
+        count_zero: 'No hay items',
+        count_one: 'Hay {count} item',
+        count_other: 'Hay {count} items',
+      },
+    });
+
+    expect(t('items.count', { values: { count: 0 } })).toBe('No hay items');
+    expect(t('items.count', { values: { count: 1 } })).toBe('Hay 1 item');
+    expect(t('items.count', { values: { count: 5 } })).toBe('Hay 5 items');
+  });
 });
