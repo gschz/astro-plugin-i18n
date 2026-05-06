@@ -13,7 +13,9 @@
 // ── Tipos públicos ─────────────────────────────────────────────────────────
 export type {
   AstroI18nTypeRegistry,
+  I18nNamespacesOptions,
   I18nPluginOptions,
+  I18nPluralizationOptions,
   Language,
   TranslationConfig,
   TranslationKey,
@@ -61,7 +63,7 @@ export {
 } from './core/setup';
 
 // ── SEO multilingüe ────────────────────────────────────────────────────────
-export { getAlternateLinks, getLocalizedPath, getXDefaultHref } from './core/seo';
+export { getAlternateLinks, getLocalizedPath, getOgLocaleMap, getXDefaultHref, langToOgLocale } from './core/seo';
 
 // ── Componentes ────────────────────────────────────────────────────────────
 export { LangToggle } from './components/LangToggle';
