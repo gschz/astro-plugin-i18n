@@ -6,16 +6,19 @@
  * - enlaces `hreflang` por idioma soportado,
  * - enlace `hreflang="x-default"` opcional,
  * - meta tags Open Graph (`og:locale` y `og:locale:alternate`) cuando
- *   se proporciona `localeMap`.
+ *   se proporciona `localeMap` o cuando el plugin puede inferirlo.
  *
  * Respeta la estrategia de routing configurada en el plugin
  * (`manual`, `prefix`, `prefix-except-default`) para construir URLs canonicas
  * por idioma de forma consistente.
+ *
+ * Si no se pasa `localeMap`, el componente genera automaticamente el mapa
+ * OG locale desde los idiomas soportados usando `getOgLocaleMap`.
  */
 import type { Language } from '../types';
 import { getConfig } from '../core/config';
 import { getCurrentLanguage } from '../core/language';
-import { getAlternateLinks, getXDefaultHref } from '../core/seo';
+import { getAlternateLinks, getOgLocaleMap, getXDefaultHref } from '../core/seo';
 
 /**
  * Props del componente `I18nHead`.
@@ -27,13 +30,17 @@ interface Props {
   currentPath?: string;
   /** URL base absoluta del sitio (ej: `https://example.com`). */
   siteUrl?: string;
-  /** Mapa opcional para Open Graph locales (ej: `{ es: 'es_ES', en: 'en_US' }`). */
+  /**
+   * Mapa opcional para Open Graph locales (ej: `{ es: 'es_ES', en: 'en_US' }`).
+   * Si no se proporciona, el mapa se genera automaticamente desde los idiomas
+   * soportados en la configuracion del plugin via `getOgLocaleMap`.
+   */
   localeMap?: Record<string, string>;
   /** Si es `true`, agrega enlace `hreflang="x-default"`. Por defecto `true`. */
   includeXDefault?: boolean;
 }
 
-const { currentLang, currentPath, siteUrl, localeMap = {}, includeXDefault = true } = Astro.props as Props;
+const { currentLang, currentPath, siteUrl, localeMap, includeXDefault = true } = Astro.props as Props;
 
 const config = getConfig();
 const resolvedPath = currentPath ?? Astro.url.pathname;
@@ -41,9 +48,14 @@ const resolvedLang = currentLang ?? getCurrentLanguage(Astro.locals as Record<st
 const resolvedSiteUrl = siteUrl ?? Astro.site?.toString() ?? Astro.url.origin;
 const alternateLinks = getAlternateLinks(resolvedPath, resolvedSiteUrl, config);
 const xDefaultHref = getXDefaultHref(resolvedPath, resolvedSiteUrl, config);
-const currentLocale = localeMap[resolvedLang as string];
+
+// Si el consumidor no pasa un mapa, lo generamos automaticamente desde los
+// idiomas soportados. Esto elimina el boilerplate tipico en los layouts.
+const resolvedLocaleMap = localeMap ?? getOgLocaleMap(config.supportedLangs ?? []);
+
+const currentLocale = resolvedLocaleMap[resolvedLang as string];
 const alternateLocales = alternateLinks
-  .map((entry) => localeMap[entry.lang])
+  .map((entry) => resolvedLocaleMap[entry.lang])
   .filter((locale): locale is string => typeof locale === 'string' && locale.length > 0)
   .filter((locale) => locale !== currentLocale);
 ---

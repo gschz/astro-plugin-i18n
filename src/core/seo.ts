@@ -5,6 +5,76 @@
 import type { I18nPluginOptions, Language } from '../types';
 import { normalizeRoutingOptions, resolveDefaultLanguage, resolveSupportedLanguages } from './routing';
 
+/**
+ * Tabla de casos especiales para la conversión BCP-47 → OG locale.
+ * Cubre las variantes regionales más frecuentes que no siguen el patrón genérico.
+ */
+const OG_LOCALE_OVERRIDES: Readonly<Record<string, string>> = {
+  'zh-CN': 'zh_CN',
+  'zh-TW': 'zh_TW',
+  'zh-HK': 'zh_HK',
+  'pt-BR': 'pt_BR',
+  'pt-PT': 'pt_PT',
+  'es-MX': 'es_MX',
+  'es-AR': 'es_AR',
+  'fr-CA': 'fr_CA',
+  'en-GB': 'en_GB',
+  'en-AU': 'en_AU',
+  'en-CA': 'en_CA',
+  'en-US': 'en_US',
+  'de-AT': 'de_AT',
+  'de-CH': 'de_CH',
+  'nl-BE': 'nl_BE',
+  'sr-Latn': 'sr_Latn_RS',
+};
+
+/**
+ * Convierte un código BCP-47 al formato requerido por Open Graph (`ll_RR`).
+ *
+ * Prioriza la tabla de casos especiales; si no existe una entrada, genera
+ * la forma estándar reemplazando el guión por guión bajo.
+ *
+ * @param lang - Código de idioma BCP-47 (ej: `"pt-BR"`, `"en"`, `"es"`).
+ * @returns Locale OG (ej: `"pt_BR"`, `"en_US"`, `"es_ES"`).
+ */
+export function langToOgLocale(lang: Language): string {
+  const key = String(lang);
+
+  if (OG_LOCALE_OVERRIDES[key]) {
+    return OG_LOCALE_OVERRIDES[key];
+  }
+
+  // Para idiomas simples sin región (ej: 'es', 'en', 'de'), duplicamos el
+  // código como región para producir el formato estándar ('es_ES', 'en_EN').
+  // Nota: este fallback genérico es suficiente para og:locale:alternate.
+  const normalized = key.replace('-', '_');
+  if (!normalized.includes('_')) {
+    const upper = normalized.toUpperCase();
+    return `${normalized}_${upper}`;
+  }
+
+  return normalized;
+}
+
+/**
+ * Genera el mapa OG locale para todos los idiomas soportados.
+ *
+ * Permite que `I18nHead` construya los metadatos Open Graph sin que el
+ * consumidor tenga que definir el mapa manualmente.
+ *
+ * @param langs - Lista de idiomas soportados (ej: `['es', 'en', 'pt-BR']`).
+ * @returns Mapa `{ lang → ogLocale }` (ej: `{ 'pt-BR': 'pt_BR', 'en': 'en_EN' }`).
+ *
+ * @example
+ * ```ts
+ * getOgLocaleMap(['es', 'en', 'pt-BR'])
+ * // → { es: 'es_ES', en: 'en_EN', 'pt-BR': 'pt_BR' }
+ * ```
+ */
+export function getOgLocaleMap(langs: Language[]): Record<string, string> {
+  return Object.fromEntries(langs.map((lang) => [lang, langToOgLocale(lang)]));
+}
+
 function normalizePath(pathname: string): string {
   if (!pathname) {
     return '/';
