@@ -1,5 +1,6 @@
 import * as React from 'react';
-import { t as globalT, useTranslation } from '../core/translate';
+import { t as globalT } from '../core/translate';
+import { useTranslation } from '../core/react/useTranslation';
 import type { Language, TranslationKey, TranslationValues } from '../types';
 
 /** Props del componente React que renderiza una traducción. */

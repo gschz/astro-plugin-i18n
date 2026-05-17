@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { setupLanguageObserver } from '../core/language';
-import { useTranslation } from '../core/translate';
+import { useTranslation } from '../core/react/useTranslation';
 import type { Language } from '../types';
 
 /** Props del selector de idioma para React. */
@@ -58,7 +58,7 @@ export const LangToggle: React.FC<LangToggleProps> = ({ className = '', language
 
   const handleLanguageChange = (newLang: Language) => {
     setSelectedLang(newLang);
-    changeLanguage(newLang);
+    void changeLanguage(newLang);
     setIsOpen(false);
   };
 
