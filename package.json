@@ -35,7 +35,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "rimraf dist && tsup && bun run build:cp-astro && bun run build:fix-imports",
+    "build": "rimraf dist && tsdown && bun run build:cp-astro && bun run build:fix-imports",
     "build:cp-astro": "copyfiles -u 2 \"src/components/**/*.astro\" dist/components",
     "build:fix-imports": "bun run scripts/fix-astro-imports.ts",
     "lint": "eslint .",
@@ -103,7 +103,7 @@
     "rimraf": "^6.1.3",
     "@typescript-eslint/eslint-plugin": "^8.59.0",
     "@typescript-eslint/parser": "^8.59.0",
-    "tsup": "^8.5.1",
+    "tsdown": "^0.22.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.5"
   },

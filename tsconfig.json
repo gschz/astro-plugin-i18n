@@ -1,7 +1,6 @@
 {
   "extends": "astro/tsconfigs/strict",
   "compilerOptions": {
-    "ignoreDeprecations": "6.0",
     "jsx": "react-jsx",
     "module": "ESNext",
     "moduleResolution": "Bundler",
@@ -15,6 +14,6 @@
     "isolatedModules": true,
     "noEmit": true
   },
-  "include": ["src", "scripts", "tests", "*.ts", "*.tsx", "*.mts", "*.cts"],
+  "include": ["src", "scripts", "tests", "*.ts", "*.tsx", "*.mts", "*.cts", "tsdown.config"],
   "exclude": ["dist", "node_modules"]
 }
