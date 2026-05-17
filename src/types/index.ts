@@ -81,6 +81,21 @@ export interface I18nPluralizationOptions {
   field?: string;
 }
 
+/** Estrategias de lazy loading soportadas. */
+export type I18nLazyLoadingStrategy = 'language' | 'namespace' | 'hybrid';
+
+/** Configuracion opcional de lazy loading de traducciones. */
+export interface I18nLazyLoadingOptions {
+  /** Si es `true`, habilita el lazy loading por idioma. */
+  enabled?: boolean;
+  /** Estrategia de lazy loading (solo `language` soportada en v1.3.x). */
+  strategy?: I18nLazyLoadingStrategy;
+  /** Namespaces que siempre se incluyen en el payload SSR inicial. */
+  preloadNamespaces?: string[];
+  /** Ruta publica donde se sirven los bundles JSON. Por defecto `"/i18n"`. */
+  publicPath?: string;
+}
+
 /** Estrategias de enrutado multilingüe soportadas por el plugin. */
 export type I18nRoutingStrategy = 'manual' | 'prefix' | 'prefix-except-default';
 
@@ -141,6 +156,14 @@ export interface TranslationConfig {
   namespaces?: I18nNamespacesOptions;
   /** Opciones para pluralizacion basada en Intl.PluralRules. */
   pluralization?: I18nPluralizationOptions;
+  /** Opciones de lazy loading para bundles de traduccion. */
+  lazyLoading?: I18nLazyLoadingOptions;
+  /**
+   * Si es `true`, ejecuta una auditoría de cobertura al finalizar el build
+   * (`astro build`) y emite warnings por cada idioma con claves faltantes.
+   * Por defecto `false`.
+   */
+  auditOnBuild?: boolean;
 }
 
 /** Alias de {@link TranslationConfig} expuesto como nombre de opción pública. */

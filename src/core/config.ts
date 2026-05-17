@@ -17,6 +17,7 @@ import { normalizeRoutingOptions } from './routing';
 const defaultConfig: TranslationConfig = {
   defaultLang: undefined,
   supportedLangs: [],
+  fallback: undefined,
   routing: {
     strategy: 'manual',
     prefixDefaultLocale: false,
@@ -31,10 +32,17 @@ const defaultConfig: TranslationConfig = {
     enabled: true,
     field: 'count',
   },
+  lazyLoading: {
+    enabled: false,
+    strategy: 'language',
+    preloadNamespaces: undefined,
+    publicPath: '/i18n',
+  },
   autoDetect: true,
   generateTypes: false,
   typesOutputPath: './src/types/i18n-types.d.ts',
   missingKeyStrategy: 'key',
+  auditOnBuild: false,
 };
 
 /** Estado mutable del singleton. Se empieza con los valores por defecto. */
@@ -105,6 +113,13 @@ export function getConfig(): TranslationConfig {
     field: currentConfig.pluralization?.field ?? 'count',
   };
 
+  const normalizedLazyLoading = {
+    enabled: currentConfig.lazyLoading?.enabled ?? false,
+    strategy: currentConfig.lazyLoading?.strategy ?? 'language',
+    preloadNamespaces: currentConfig.lazyLoading?.preloadNamespaces,
+    publicPath: currentConfig.lazyLoading?.publicPath ?? '/i18n',
+  };
+
   return {
     ...currentConfig,
     defaultLang: currentConfig.defaultLang ?? 'en',
@@ -113,6 +128,7 @@ export function getConfig(): TranslationConfig {
     translationsDir: currentConfig.translationsDir ?? './src/i18n',
     namespaces: normalizedNamespaces,
     pluralization: normalizedPluralization,
+    lazyLoading: normalizedLazyLoading,
     autoDetect: currentConfig.autoDetect ?? true,
     generateTypes: currentConfig.generateTypes ?? false,
     typesOutputPath: currentConfig.typesOutputPath ?? './src/types/i18n-types.d.ts',
