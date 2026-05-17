@@ -8,12 +8,47 @@
  */
 
 import type { AstroIntegration, HookParameters } from 'astro';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { getConfig, initConfig } from './core/config';
 import type { I18nPluginOptions } from './types';
 import { generateTranslationTypes } from './utils/type-generator';
 import { setOptions } from './middleware-entrypoint';
+import { clearTranslationsCache } from './core/translations';
+import { auditTranslationCoverage, type TranslationCoverageResult } from './core/audit';
+import { debugLog } from './utils/debug';
+import { bundleLanguageTranslations, generateBundles } from './core/bundle-builder';
+import { matchSupportedLanguage } from './core/routing';
 
+/** Nombre del paquete registrado en `AstroIntegration.name`. */
 const packageName = '@gschz/astro-plugin-i18n';
+
+/**
+ * Directorio de salida de Astro (`outDir`) según la configuración del proyecto.
+ */
+type AstroOutDir = string | URL | undefined;
+
+let astroOutDir: AstroOutDir;
+
+type TranslationWatcher = {
+  add: (path: string) => void;
+  on: (event: string, listener: (filePath: string) => void) => void;
+  off?: (event: string, listener: (filePath: string) => void) => void;
+  removeListener?: (event: string, listener: (filePath: string) => void) => void;
+  setMaxListeners?: (n: number) => void;
+  getMaxListeners?: () => number;
+};
+
+type TranslationWatcherState = {
+  dir?: string;
+  handler?: (filePath: string) => void;
+  watcher?: TranslationWatcher;
+};
+
+/**
+ * Logger del hook `astro:build:done` de Astro.
+ */
+type BuildDoneLogger = HookParameters<'astro:build:done'>['logger'];
 
 /**
  * Crea la integración Astro para el plugin i18n.
@@ -22,8 +57,11 @@ const packageName = '@gschz/astro-plugin-i18n';
  * - `astro:config:setup`: inicializa la config, guarda opciones en `global`,
  *   registra el middleware y opcionalmente genera tipos.
  * - `astro:server:setup`: re-sincroniza las opciones con el middleware del
- *   servidor de desarrollo (en dev, los módulos pueden recargarse).
- * - `astro:build:start` / `astro:build:done`: logs de progreso del build.
+ *   servidor de desarrollo (en dev, los módulos pueden recargarse); invalidación
+ *   de caché al cambiar JSON; middleware opcional para servir bundles en dev.
+ * - `astro:build:start`: log de inicio de build.
+ * - `astro:build:done`: auditoría opcional de cobertura (`auditOnBuild`),
+ *   generación de bundles lazy en disco y logs de cierre.
  *
  * @param options - Opciones de configuración del plugin. `defaultLang` y
  *   `supportedLangs` son obligatorios en tiempo de ejecución.
@@ -38,8 +76,15 @@ export function createI18nIntegration(options: Partial<I18nPluginOptions> = {}):
   return {
     name: packageName,
     hooks: {
-      'astro:config:setup': async ({ logger, command, addMiddleware }: HookParameters<'astro:config:setup'>) => {
+      'astro:config:setup': async ({
+        logger,
+        command,
+        addMiddleware,
+        config,
+      }: HookParameters<'astro:config:setup'>) => {
         logger.info(`Initializing integration (config stage)...`);
+
+        astroOutDir = (config as { outDir?: string | URL }).outDir;
 
         initConfig(options);
         logAppliedConfig(logger);
@@ -65,10 +110,88 @@ export function createI18nIntegration(options: Partial<I18nPluginOptions> = {}):
         logger.info(`Added middleware`);
       },
 
-      'astro:server:setup': ({ logger }: HookParameters<'astro:server:setup'>) => {
+      'astro:server:setup': ({ server, logger }: HookParameters<'astro:server:setup'>) => {
         logger.info(`Setting up middleware for dev server...`);
         // Re-sincronizamos en caso de que el módulo haya sido reimportado por HMR.
         setOptions(options);
+
+        // HMR: cuando cambia cualquier JSON en translationsDir, invalidamos la
+        // caché de servidor para que la siguiente petición lea los archivos actualizados.
+        const config = getConfig();
+        const translationsDir = path.resolve(process.cwd(), config.translationsDir ?? './src/i18n');
+
+        const watcherState = getTranslationsWatcherState();
+        const watcher = server.watcher as TranslationWatcher;
+
+        if (watcherState.handler && watcherState.watcher) {
+          const shouldDetach = watcherState.watcher !== watcher || watcherState.dir !== translationsDir;
+          if (shouldDetach) {
+            detachWatcherListener(watcherState.watcher, watcherState.handler);
+            watcherState.handler = undefined;
+            watcherState.watcher = undefined;
+            watcherState.dir = undefined;
+          }
+        }
+
+        if (!watcherState.handler) {
+          const handleTranslationChange = (filePath: string) => {
+            if (filePath.startsWith(translationsDir) && filePath.endsWith('.json')) {
+              clearTranslationsCache();
+              debugLog(
+                `[integration] translations cache invalidated (${path.relative(process.cwd(), filePath)} changed)`,
+              );
+              logger.info(`i18n: translations reloaded (${path.relative(process.cwd(), filePath)})`);
+            }
+          };
+
+          watcherState.dir = translationsDir;
+          watcherState.handler = handleTranslationChange;
+          watcherState.watcher = watcher;
+
+          ensureWatcherMaxListeners(watcher);
+          watcher.add(translationsDir);
+          watcher.on('change', handleTranslationChange);
+        }
+
+        const lazyLoading = config.lazyLoading;
+        if (lazyLoading?.enabled) {
+          const publicBase = normalizePublicPath(lazyLoading.publicPath ?? '/i18n');
+
+          server.middlewares.use(async (req, res, next) => {
+            if (!req.url) {
+              return next();
+            }
+
+            const url = new URL(req.url, 'http://localhost');
+            if (!url.pathname.startsWith(`${publicBase}/`) || !url.pathname.endsWith('.json')) {
+              return next();
+            }
+
+            const requestedLang = url.pathname.slice(publicBase.length + 1).replace(/\.json$/, '');
+            const supportedLangs = config.supportedLangs ?? [];
+            const resolvedLang = matchSupportedLanguage(requestedLang, supportedLangs);
+
+            if (!resolvedLang) {
+              res.statusCode = 404;
+              res.end('Not found');
+              return;
+            }
+
+            try {
+              const bundle = await bundleLanguageTranslations(resolvedLang);
+              const body = JSON.stringify(bundle);
+
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'application/json; charset=utf-8');
+              res.setHeader('Cache-Control', 'no-store');
+              res.end(body);
+            } catch (error) {
+              logger.warn(`i18n: failed to serve bundle for "${resolvedLang}": ${error}`);
+              res.statusCode = 500;
+              res.end('Failed to load translations');
+            }
+          });
+        }
       },
 
       'astro:build:start': async ({ logger }: HookParameters<'astro:build:start'>) => {
@@ -77,6 +200,8 @@ export function createI18nIntegration(options: Partial<I18nPluginOptions> = {}):
 
       'astro:build:done': async ({ logger }: HookParameters<'astro:build:done'>) => {
         logger.info(`Build process contribution completed.`);
+        await runAuditOnBuildIfEnabled(options, logger);
+        await generateLazyBundlesIfEnabled(logger);
       },
     },
   };
@@ -84,12 +209,11 @@ export function createI18nIntegration(options: Partial<I18nPluginOptions> = {}):
 
 /**
  * Valida que las opciones requeridas estén presentes y sean coherentes.
- * Lanza un `Error` con un mensaje descriptivo si alguna restricción no se cumple.
  *
  * @param options - Opciones a validar.
  * @param logger - Logger de Astro, si está disponible (para logging adicional).
- * @throws {Error} Si `defaultLang`, `supportedLangs` o la inclusión de
- *   `defaultLang` en `supportedLangs` no son válidos.
+ * @throws Si `defaultLang`, `supportedLangs` o la inclusión de `defaultLang` en
+ *   `supportedLangs` no son válidos.
  */
 function validateOptions(
   options: Partial<I18nPluginOptions>,
@@ -169,6 +293,117 @@ async function maybeGenerateTypes(
     }
   } else if (options.generateTypes) {
     logger.info("Skipping i18n type generation (enabled but command is not 'build' or 'dev').");
+  }
+}
+
+function getTranslationsWatcherState(): TranslationWatcherState {
+  const runtimeGlobal = globalThis as typeof globalThis & {
+    __ASTRO_I18N_TRANSLATIONS_WATCHER__?: TranslationWatcherState;
+  };
+
+  runtimeGlobal.__ASTRO_I18N_TRANSLATIONS_WATCHER__ ??= {};
+
+  return runtimeGlobal.__ASTRO_I18N_TRANSLATIONS_WATCHER__;
+}
+
+function detachWatcherListener(watcher: TranslationWatcher, handler: (filePath: string) => void): void {
+  if (typeof watcher.off === 'function') {
+    watcher.off('change', handler);
+    return;
+  }
+
+  if (typeof watcher.removeListener === 'function') {
+    watcher.removeListener('change', handler);
+  }
+}
+
+function ensureWatcherMaxListeners(watcher: TranslationWatcher): void {
+  if (typeof watcher.setMaxListeners !== 'function' || typeof watcher.getMaxListeners !== 'function') {
+    return;
+  }
+
+  const currentMax = watcher.getMaxListeners();
+  const targetMax = Math.max(currentMax, 25);
+
+  if (targetMax !== currentMax) {
+    watcher.setMaxListeners(targetMax);
+  }
+}
+
+function normalizePublicPath(publicPath: string): string {
+  const trimmed = publicPath.trim().length > 0 ? publicPath.trim() : '/i18n';
+  const withSlash = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+  return withSlash.replace(/\/+$/, '');
+}
+
+function resolveOutDirPath(outDir: string | URL | undefined): string {
+  if (outDir instanceof URL) {
+    return fileURLToPath(outDir);
+  }
+
+  if (typeof outDir === 'string' && outDir.trim().length > 0) {
+    return path.resolve(process.cwd(), outDir);
+  }
+
+  return path.resolve(process.cwd(), 'dist');
+}
+
+function resolveLazyOutputDir(outDir: string | URL | undefined, publicPath?: string): string {
+  const normalizedPublic = normalizePublicPath(publicPath ?? '/i18n').replace(/^\//, '');
+  return path.join(resolveOutDirPath(outDir), normalizedPublic);
+}
+
+function logTranslationCoverageReport(logger: BuildDoneLogger, report: TranslationCoverageResult): void {
+  if (report.isComplete) {
+    logger.info(`i18n coverage: all ${report.languages.length} languages have ${report.totalKeys} keys ✓`);
+    return;
+  }
+
+  for (const [lang, missingKeys] of Object.entries(report.missing)) {
+    if (missingKeys.length === 0) {
+      continue;
+    }
+
+    const preview = missingKeys.slice(0, 5).join(', ');
+    const extraCount = missingKeys.length - 5;
+    const moreSuffix = extraCount > 0 ? ` (+${extraCount} more)` : '';
+    logger.warn(
+      `i18n coverage: "${lang}" is missing ${missingKeys.length}/${report.totalKeys} keys: ${preview}${moreSuffix}`,
+    );
+  }
+}
+
+/**
+ * Si `auditOnBuild` está activo, ejecuta la auditoría de cobertura y registra el informe.
+ */
+async function runAuditOnBuildIfEnabled(options: Partial<I18nPluginOptions>, logger: BuildDoneLogger): Promise<void> {
+  if (!options.auditOnBuild) {
+    return;
+  }
+
+  try {
+    const report = await auditTranslationCoverage(options);
+    logTranslationCoverageReport(logger, report);
+  } catch (error) {
+    logger.warn(`i18n coverage audit failed: ${error}`);
+  }
+}
+
+/**
+ * Tras el build, genera en disco los bundles por idioma si lazy loading está habilitado.
+ */
+async function generateLazyBundlesIfEnabled(logger: BuildDoneLogger): Promise<void> {
+  const config = getConfig();
+  if (!config.lazyLoading?.enabled) {
+    return;
+  }
+
+  try {
+    const outputDir = resolveLazyOutputDir(astroOutDir, config.lazyLoading.publicPath);
+    await generateBundles(outputDir);
+    logger.info(`i18n: bundles generated at ${path.relative(process.cwd(), outputDir)}`);
+  } catch (error) {
+    logger.warn(`i18n: failed to generate bundles: ${error}`);
   }
 }
 
