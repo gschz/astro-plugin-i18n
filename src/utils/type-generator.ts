@@ -45,7 +45,9 @@ export async function generateTranslationTypes(): Promise<string> {
   } catch (error) {
     console.error(`[i18n-types] Failed to write types file to ${outputPath}:`, error);
 
-    throw new Error(`Failed to write i18n types file: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Failed to write i18n types file: ${error instanceof Error ? error.message : String(error)}`, {
+      cause: error,
+    });
   }
 }
 

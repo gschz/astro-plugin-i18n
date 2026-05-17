@@ -14,6 +14,8 @@
 
 export type {
   AstroI18nTypeRegistry,
+  I18nLazyLoadingOptions,
+  I18nLazyLoadingStrategy,
   I18nNamespacesOptions,
   I18nPluralizationOptions,
   Language,
