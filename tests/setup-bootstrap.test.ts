@@ -49,6 +49,35 @@ describe('setup bootstrap payload', () => {
     expect(payload.allTranslations.en.demo.title).toBe('Hello');
   });
 
+  it('getI18nClientBootstrapPayload no precarga todos los idiomas con lazyLoading', async () => {
+    const tmp = createTempDir();
+
+    writeJson(path.join(tmp, 'es.json'), { demo: { title: 'Hola' } });
+    writeJson(path.join(tmp, 'en.json'), { demo: { title: 'Hello' } });
+
+    initConfig({
+      defaultLang: 'es',
+      supportedLangs: ['es', 'en'],
+      translationsDir: tmp,
+      lazyLoading: {
+        enabled: true,
+      },
+    });
+
+    const payload = await getI18nClientBootstrapPayload({
+      i18n: {
+        config: {
+          defaultLang: 'es',
+          supportedLangs: ['es', 'en'],
+        },
+      },
+    });
+
+    expect(payload.lang).toBe('es');
+    expect(payload.translations.demo.title).toBe('Hola');
+    expect(Object.keys(payload.allTranslations)).toHaveLength(0);
+  });
+
   it('reloadTranslations invalida cache de servidor', async () => {
     const tmp = createTempDir();
     const filePath = path.join(tmp, 'es.json');
