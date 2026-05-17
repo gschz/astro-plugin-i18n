@@ -7,30 +7,38 @@
   "license": "MIT",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs",
+      "browser": {
+        "types": "./dist/client.d.mts",
+        "import": "./dist/client.mjs"
+      }
     },
     "./components/*.astro": "./dist/components/*.astro",
     "./components/*": {
-      "import": "./dist/components/*.js",
-      "types": "./dist/components/*.d.ts"
+      "import": "./dist/components/*.mjs",
+      "types": "./dist/components/*.d.mts"
     },
     "./integration": {
-      "import": "./dist/integration.js",
-      "types": "./dist/integration.d.ts"
+      "import": "./dist/integration.mjs",
+      "types": "./dist/integration.d.mts"
     },
     "./client": {
-      "import": "./dist/client.js",
-      "types": "./dist/client.d.ts"
+      "import": "./dist/client.mjs",
+      "types": "./dist/client.d.mts"
     },
     "./middleware-entrypoint": {
-      "import": "./dist/middleware-entrypoint.js",
-      "types": "./dist/middleware-entrypoint.d.ts"
+      "import": "./dist/middleware-entrypoint.mjs",
+      "types": "./dist/middleware-entrypoint.d.mts"
+    },
+    "./schema": {
+      "import": "./dist/schema.mjs",
+      "types": "./dist/schema.d.mts"
     }
   },
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
   "files": [
     "dist"
   ],
