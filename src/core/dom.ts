@@ -4,7 +4,7 @@
 
 import type { Language, TranslationKey, TranslationValues } from '../types';
 import { getCurrentLanguage, setupLanguageObserver } from './language';
-import { t } from './translate';
+import { t, hasTranslation } from './translate';
 
 export interface DataI18nRenderOptions {
   /** Nodo raíz donde buscar atributos `data-i18n-key` (por defecto `document`). */
@@ -65,9 +65,15 @@ export function renderDataI18n(options: DataI18nRenderOptions = {}): void {
     }
 
     const values = parseValues(element.getAttribute(valuesAttribute));
-    const translatedText = t(key, values ? { values } : undefined);
+    const translationOptions = values ? { values } : undefined;
 
-    element.textContent = translatedText;
+    if (!hasTranslation(key, translationOptions)) {
+      // Si no tenemos la traducción en el cliente (ej. por lazyLoading y fallback faltante),
+      // no sobreescribimos el DOM para preservar posibles fallbacks SSR.
+      return;
+    }
+
+    element.textContent = t(key, translationOptions);
   });
 }
 
