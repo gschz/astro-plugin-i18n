@@ -8,6 +8,7 @@
  */
 
 import type { I18nPluginOptions, I18nRoutingOptions, I18nRoutingStrategy, Language } from '../types';
+import { debugLog } from '../utils/debug';
 
 const VALID_ROUTING_STRATEGIES: ReadonlySet<I18nRoutingStrategy> = new Set([
   'manual',
@@ -131,9 +132,7 @@ export function getPathLanguage(pathname: string, supportedLangs: Language[]): L
   const normalized = normalizePathname(pathname);
   const segment = normalized.split('/').find(Boolean);
   const result = matchSupportedLanguage(segment, supportedLangs);
-  console.error(
-    `[getPathLanguage] pathname=${pathname}, normalized=${normalized}, segment=${segment}, result=${result}, supportedLangs=${supportedLangs.join(',')}`,
-  );
+  debugLog(`[getPathLanguage] pathname=${pathname}, segment=${segment}, result=${result}`);
   return result;
 }
 

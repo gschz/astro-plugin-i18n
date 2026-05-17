@@ -17,6 +17,7 @@ import {
   resolveDefaultLanguage,
   resolveSupportedLanguages,
 } from './core/routing';
+import { debugLog } from './utils/debug';
 
 /**
  * Opciones validadas que se comparten con el middleware desde la integración.
@@ -84,7 +85,7 @@ function parseAcceptLanguageHeader(headerValue: string | null, supportedLangs: L
     return null;
   }
 
-  console.error(`[parseAcceptLanguageHeader] headerValue=${headerValue}, supportedLangs=${supportedLangs.join(',')}`);
+  debugLog(`[parseAcceptLanguageHeader] headerValue=${headerValue}`);
 
   const preferences = headerValue
     .split(',')
@@ -134,13 +135,11 @@ function parseAcceptLanguageHeader(headerValue: string | null, supportedLangs: L
       return b.quality - a.quality;
     });
 
-  console.error(`[parseAcceptLanguageHeader] preferences after parsing: ${JSON.stringify(preferences)}`);
-
   for (const preference of preferences) {
     const match = matchSupportedLanguage(preference.lang, supportedLangs);
 
     if (match) {
-      console.error(`[parseAcceptLanguageHeader] Matched: ${preference.lang} -> ${match}`);
+      debugLog(`[parseAcceptLanguageHeader] matched: ${preference.lang} -> ${match}`);
       return match;
     }
   }
@@ -153,34 +152,32 @@ function parseAcceptLanguageHeader(headerValue: string | null, supportedLangs: L
  * 1) segmento URL, 2) cookie i18n-lang, 3) Accept-Language, 4) defaultLang.
  */
 function resolveLanguageFromRequest(context: LanguageResolutionContext, options: Partial<I18nPluginOptions>): Language {
-  console.error(`[CRITICAL-DEBUG] Entering resolveLanguageFromRequest for ${context.url.pathname}`);
   const supportedLangs = resolveSupportedLanguages(options);
-  console.error(`[CRITICAL-DEBUG] supportedLangs resolved to: ${JSON.stringify(supportedLangs)}`);
   const defaultLang = resolveDefaultLanguage(options, supportedLangs);
 
   // 1. Intenta extraer idioma del segmento de URL (ej: /en/, /pt-BR/)
   const urlLang = getPathLanguage(context.url.pathname, supportedLangs);
   if (urlLang) {
-    console.error(`[i18n] Idioma resuelto desde URL: ${urlLang}`);
+    debugLog(`[middleware] idioma resuelto desde URL: ${urlLang}`);
     return urlLang;
   }
 
   // 2. Cookie de preferencia guardada
   const cookieLang = matchSupportedLanguage(context.cookies?.get?.('i18n-lang')?.value, supportedLangs);
   if (cookieLang) {
-    console.error(`[i18n] Idioma resuelto desde cookie: ${cookieLang}`);
+    debugLog(`[middleware] idioma resuelto desde cookie: ${cookieLang}`);
     return cookieLang;
   }
 
   // 3. Header Accept-Language
   const headerLang = parseAcceptLanguageHeader(context.request.headers.get('accept-language'), supportedLangs);
   if (headerLang) {
-    console.error(`[i18n] Idioma resuelto desde Accept-Language: ${headerLang}`);
+    debugLog(`[middleware] idioma resuelto desde Accept-Language: ${headerLang}`);
     return headerLang;
   }
 
   // 4. Idioma por defecto
-  console.error(`[i18n] Usando idioma por defecto: ${defaultLang}`);
+  debugLog(`[middleware] usando idioma por defecto: ${defaultLang}`);
   return defaultLang;
 }
 
@@ -206,33 +203,30 @@ declare global {
  * en SSR sin depender de cookies, headers ni detección de navegador.
  */
 export const onRequest = defineMiddleware((context: APIContext, next: MiddlewareNext) => {
-  console.error(`[i18n-middleware] Processing request: ${context.url.pathname}`);
+  debugLog(`[middleware] processing request: ${context.url.pathname}`);
+
   const options = getOptions();
   const activeOptions = options || {};
   const redirectUrl = getRoutingRedirect(context.url, activeOptions);
 
   if (redirectUrl) {
-    console.error(`[i18n-middleware] Redirecting ${context.url.pathname} to ${redirectUrl.pathname}`);
+    debugLog(`[middleware] redirecting ${context.url.pathname} → ${redirectUrl.pathname}`);
     return Response.redirect(redirectUrl, 302);
   }
 
   const resolvedLanguage = resolveLanguageFromRequest(context, activeOptions);
-  console.error(`[i18n-middleware] Final resolved language: ${resolvedLanguage} for ${context.url.pathname}`);
+  debugLog(`[middleware] resolved language: ${resolvedLanguage} for ${context.url.pathname}`);
 
   if (!options) {
-    console.warn('[i18n] No hay opciones disponibles en el middleware. La configuración puede estar incompleta.');
+    console.warn('[i18n] No hay opciones disponibles en el middleware. Verifica la configuración de la integración.');
   }
 
   if (typeof context.locals === 'object' && context.locals !== null) {
-    const locals = context.locals as any;
-
-    if (!locals.i18n) {
-      locals.i18n = {};
-    }
+    context.locals.i18n ??= {};
 
     // Inyectamos la config para que esté disponible durante el renderizado SSR.
-    locals.i18n.config = options || {};
-    locals.i18n.lang = resolvedLanguage;
+    context.locals.i18n.config = options || {};
+    context.locals.i18n.lang = resolvedLanguage;
 
     if (!options?.defaultLang) {
       console.warn('[i18n] `defaultLang` no configurado en el middleware. El idioma por defecto puede ser incorrecto.');

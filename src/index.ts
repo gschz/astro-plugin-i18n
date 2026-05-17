@@ -13,6 +13,8 @@
 // ── Tipos públicos ─────────────────────────────────────────────────────────
 export type {
   AstroI18nTypeRegistry,
+  I18nLazyLoadingOptions,
+  I18nLazyLoadingStrategy,
   I18nNamespacesOptions,
   I18nPluginOptions,
   I18nPluralizationOptions,
@@ -24,7 +26,11 @@ export type {
 } from './types';
 
 // ── Traducción (cliente + servidor) ────────────────────────────────────────
-export { populateClientCache, t, translateAsync, useTranslation } from './core/translate';
+export { populateClientCache, t } from './core/translate';
+export { translateAsync } from './core/translate-async';
+
+// ── Hook React (re-exportado para compatibilidad con v1.x) ─────────────────
+export { useTranslation } from './core/react/useTranslation';
 
 // ── Gestión de idioma ──────────────────────────────────────────────────────
 export {
@@ -69,6 +75,14 @@ export { getAlternateLinks, getLocalizedPath, getOgLocaleMap, getXDefaultHref, l
 export { LangToggle } from './components/LangToggle';
 export { TranslatedText } from './components/TranslatedText';
 
+// ── DOM declarativo (browser-only) ─────────────────────────────────────────
+export { bindDataI18n, renderDataI18n } from './core/dom';
+export type { DataI18nBinderOptions, DataI18nRenderOptions } from './core/dom';
+
 // ── Integración y utilidades de build ──────────────────────────────────────
 export { default as createI18nIntegration } from './integration';
 export { generateTranslationTypes } from './utils/type-generator';
+
+// ── Auditoría de cobertura (server-only) ───────────────────────────────────
+export { auditTranslationCoverage } from './core/audit';
+export type { TranslationCoverageResult } from './core/audit';

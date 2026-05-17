@@ -6,7 +6,7 @@
  * configuración activa sin importar los módulos core directamente.
  */
 
-import type { Language } from '../types';
+import type { I18nPluginOptions, Language } from '../types';
 import { getConfig, getSupportedLanguages } from './config';
 import { getCurrentLanguage } from './language';
 import { getTranslationsForLanguage, clearTranslationsCache } from './translations';
@@ -84,25 +84,55 @@ export function getLanguageRedirect(url: URL): URL | null {
  * @returns Payload listo para inyectarse en `window.__INITIAL_I18N_STATE__` y
  *   `window.__INITIAL_I18N_ALL_TRANSLATIONS__`.
  */
-export async function getI18nClientBootstrapPayload(locals?: Record<string, any>): Promise<I18nClientBootstrapPayload> {
+export async function getI18nClientBootstrapPayload(
+  locals?: Record<string, any>,
+  options?: { preloadNamespaces?: string[] },
+): Promise<I18nClientBootstrapPayload> {
   const lang = getCurrentLanguage(locals);
   const translations = await getTranslationsForLanguage(lang);
-
-  const localsConfig = locals?.i18n?.config as { supportedLangs?: Language[] } | undefined;
-  const supportedLangs =
-    localsConfig?.supportedLangs && localsConfig.supportedLangs.length > 0 ? localsConfig.supportedLangs : [lang];
-
-  const allTranslations = Object.fromEntries(
-    await Promise.all(
-      supportedLangs.map(async (supportedLang) => [supportedLang, await getTranslationsForLanguage(supportedLang)]),
-    ),
-  ) as Record<Language, Record<string, any>>;
-
   const config = getConfig();
+
+  let initialTranslations = translations;
+  const lazyLoading = config.lazyLoading;
+  const preloadNamespaces = options?.preloadNamespaces ?? lazyLoading?.preloadNamespaces;
+
+  if (
+    lazyLoading?.enabled &&
+    Array.isArray(preloadNamespaces) &&
+    preloadNamespaces.length > 0 &&
+    config.namespaces?.enabled
+  ) {
+    const filtered: Record<string, any> = {};
+
+    for (const namespace of preloadNamespaces) {
+      if (namespace in translations) {
+        filtered[namespace] = translations[namespace];
+      }
+    }
+
+    initialTranslations = filtered;
+  }
+
+  const localsConfig = locals?.i18n?.config as Partial<I18nPluginOptions> | undefined;
+
+  let supportedLangs = [lang];
+  if (localsConfig?.supportedLangs && localsConfig.supportedLangs.length > 0) {
+    supportedLangs = localsConfig.supportedLangs;
+  } else if (config.supportedLangs && config.supportedLangs.length > 0) {
+    supportedLangs = config.supportedLangs;
+  }
+
+  const allTranslations = lazyLoading?.enabled
+    ? ({} as Record<Language, Record<string, any>>)
+    : (Object.fromEntries(
+        await Promise.all(
+          supportedLangs.map(async (supportedLang) => [supportedLang, await getTranslationsForLanguage(supportedLang)]),
+        ),
+      ) as Record<Language, Record<string, any>>);
 
   return {
     lang,
-    translations,
+    translations: initialTranslations,
     allTranslations,
     supportedLangs,
     config,

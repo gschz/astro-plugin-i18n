@@ -13,6 +13,7 @@ import { getConfig, updateConfig } from './config';
 import { getPathLanguage, matchSupportedLanguage } from './routing';
 import { getLocalizedPath } from './seo';
 import { populateClientCache } from './translate';
+import { debugLog } from '../utils/debug';
 
 /**
  * Extensión del objeto `window` con los globals que el servidor Astro inyecta
@@ -29,6 +30,8 @@ type RuntimeWindow = typeof globalThis & {
     config?: Partial<I18nPluginOptions>;
   };
   __INITIAL_I18N_ALL_TRANSLATIONS__?: Record<string, Record<string, any>>;
+  /** Idiomas cuyo bundle JSON lazy ya se fusionó por completo en cliente (modo SSR parcial). */
+  __ASTRO_I18N_LAZY_FULL_LANGS__?: Set<string>;
 };
 
 interface ChangeLanguageOptions {
@@ -191,12 +194,33 @@ export function syncLanguageRoute(lang: Language): void {
  * @param lang - Código del idioma al que se cambia.
  * @param options - Opciones para cambiar el idioma.
  */
-export function changeLanguage(lang: Language, options: ChangeLanguageOptions = {}): void {
+export async function changeLanguage(lang: Language, options: ChangeLanguageOptions = {}): Promise<void> {
   // No-op en SSR; este módulo opera únicamente en el navegador.
   if (typeof document === 'undefined') {
     return;
   }
 
+  const config = getConfig();
+
+  if (config.lazyLoading?.enabled) {
+    if (config.lazyLoading.strategy && config.lazyLoading.strategy !== 'language') {
+      debugLog(
+        `[changeLanguage] lazyLoading.strategy="${config.lazyLoading.strategy}" no soportada, usando "language".`,
+      );
+    }
+
+    if (needsLazyLanguageFetch(lang, config)) {
+      const loaded = await fetchLanguageBundle(lang, config);
+      if (!loaded) {
+        return;
+      }
+    }
+  }
+
+  applyLanguageChange(lang, options);
+}
+
+function applyLanguageChange(lang: Language, options: ChangeLanguageOptions): void {
   document.documentElement.setAttribute('lang', lang);
 
   if (typeof localStorage !== 'undefined') {
@@ -204,11 +228,94 @@ export function changeLanguage(lang: Language, options: ChangeLanguageOptions = 
     localStorage.setItem('lang', lang);
   }
 
+  // Escribir cookie para que el middleware SSR pueda leer la preferencia del usuario
+  // en la siguiente petición, antes de que el JS se ejecute en el cliente.
+  document.cookie = `i18n-lang=${encodeURIComponent(lang)}; path=/; SameSite=Lax; max-age=31536000`;
+
   if (options.syncRoute ?? true) {
     syncLanguageRoute(lang);
   }
 
   document.dispatchEvent(new CustomEvent('languagechange', { detail: { language: lang } }));
+}
+
+function getClientCache(): Record<string, string> {
+  const runtimeGlobal = globalThis as RuntimeWindow & {
+    __ASTRO_I18N_CLIENT_TRANSLATIONS_CACHE__?: Record<string, string>;
+  };
+
+  return runtimeGlobal.__ASTRO_I18N_CLIENT_TRANSLATIONS_CACHE__ ?? {};
+}
+
+function isLanguageInCache(lang: Language): boolean {
+  const cache = getClientCache();
+  return Object.keys(cache).some((key) => key.startsWith(`${lang}:`));
+}
+
+function usesLazyPartialSSR(config: ReturnType<typeof getConfig>): boolean {
+  if (!config.lazyLoading?.enabled) {
+    return false;
+  }
+
+  const preload = config.lazyLoading.preloadNamespaces;
+  return config.namespaces?.enabled === true && Array.isArray(preload) && preload.length > 0;
+}
+
+function getLazyFullyLoadedLangs(): Set<string> {
+  const runtimeWindow = globalThis as RuntimeWindow;
+
+  runtimeWindow.__ASTRO_I18N_LAZY_FULL_LANGS__ ??= new Set();
+
+  return runtimeWindow.__ASTRO_I18N_LAZY_FULL_LANGS__;
+}
+
+function markLazyLangFullyLoaded(lang: Language): void {
+  getLazyFullyLoadedLangs().add(lang);
+}
+
+/**
+ * Determina si hay que pedir el bundle JSON del idioma por red.
+ *
+ * Con SSR parcial (`preloadNamespaces`), el servidor solo hidrata algunos namespaces;
+ * la caché ya tiene prefijo `lang:` pero el bundle sigue incompleto hasta el fetch.
+ */
+function needsLazyLanguageFetch(lang: Language, config: ReturnType<typeof getConfig>): boolean {
+  if (!config.lazyLoading?.enabled) {
+    return false;
+  }
+
+  if (usesLazyPartialSSR(config)) {
+    return !getLazyFullyLoadedLangs().has(lang);
+  }
+
+  return !isLanguageInCache(lang);
+}
+
+function normalizePublicPath(publicPath: string): string {
+  const trimmed = publicPath.trim().length > 0 ? publicPath.trim() : '/i18n';
+  const withSlash = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+  return withSlash.replace(/\/+$/, '');
+}
+
+async function fetchLanguageBundle(lang: Language, config: ReturnType<typeof getConfig>): Promise<boolean> {
+  const publicPath = normalizePublicPath(config.lazyLoading?.publicPath ?? '/i18n');
+  const bundleUrl = `${publicPath}/${encodeURIComponent(lang)}.json`;
+
+  try {
+    const response = await fetch(bundleUrl);
+    if (!response.ok) {
+      console.error(`[i18n] Failed to load translations for "${lang}": ${response.statusText}`);
+      return false;
+    }
+
+    const bundledTranslations = (await response.json()) as Record<string, any>;
+    populateClientCache(lang, bundledTranslations);
+    markLazyLangFullyLoaded(lang);
+    return true;
+  } catch (error) {
+    console.error(`[i18n] Failed to load translations for "${lang}":`, error);
+    return false;
+  }
 }
 
 /**
@@ -292,7 +399,7 @@ function resolveBrowserLanguage(
  * - Las visitas sucesivas respeten la preferencia explícita del usuario.
  * - El idioma del servidor nunca sea sobrescrito silenciosamente al hidratar.
  */
-export function setupLanguage(): void {
+export async function setupLanguage(): Promise<void> {
   if (typeof globalThis === 'undefined' || globalThis.document === undefined) {
     return;
   }
@@ -327,7 +434,7 @@ export function setupLanguage(): void {
 
   const language = initialLang || storedLang || browserLang || fallbackDefaultLang;
 
-  changeLanguage(language, { syncRoute: false });
+  await changeLanguage(language, { syncRoute: false });
 }
 
 /**
@@ -360,34 +467,38 @@ export function bootstrapClientI18n(): void {
   const initialState = runtimeWindow.__INITIAL_I18N_STATE__;
   updateConfig(initialState?.config || {});
 
-  // Hidratamos toda la caché antes de llamar a setupLanguage, ya que
-  // este último puede necesitar las traducciones para el render inicial.
-  if (runtimeWindow.__INITIAL_I18N_ALL_TRANSLATIONS__) {
-    for (const [lang, translations] of Object.entries(runtimeWindow.__INITIAL_I18N_ALL_TRANSLATIONS__)) {
-      populateClientCache(lang, translations || {});
+  void (async () => {
+    // Hidratamos toda la caché antes de llamar a setupLanguage, ya que
+    // este último puede necesitar las traducciones para el render inicial.
+    if (runtimeWindow.__INITIAL_I18N_ALL_TRANSLATIONS__) {
+      for (const [lang, translations] of Object.entries(runtimeWindow.__INITIAL_I18N_ALL_TRANSLATIONS__)) {
+        populateClientCache(lang, translations || {});
+      }
     }
-  }
 
-  setupLanguage();
+    await setupLanguage();
 
-  globalThis.window.addEventListener('popstate', () => {
-    const config = getConfig();
-    const supportedLangs =
-      config.supportedLangs && config.supportedLangs.length > 0 ? config.supportedLangs : [config.defaultLang || 'en'];
-    const pathLang = getPathLanguage(globalThis.window.location.pathname, supportedLangs);
+    globalThis.window.addEventListener('popstate', () => {
+      const config = getConfig();
+      const supportedLangs =
+        config.supportedLangs && config.supportedLangs.length > 0
+          ? config.supportedLangs
+          : [config.defaultLang || 'en'];
+      const pathLang = getPathLanguage(globalThis.window.location.pathname, supportedLangs);
 
-    if (pathLang) {
-      changeLanguage(pathLang, { syncRoute: false });
-    }
-  });
+      if (pathLang) {
+        void changeLanguage(pathLang, { syncRoute: false });
+      }
+    });
 
-  // Notificamos que el sistema está listo. Los listeners con `{ once: true }`
-  // en los componentes pueden activar el render en este punto.
-  document.dispatchEvent(
-    new CustomEvent('i18nready', {
-      detail: { language: getCurrentLanguage() },
-    }),
-  );
+    // Notificamos que el sistema está listo. Los listeners con `{ once: true }`
+    // en los componentes pueden activar el render en este punto.
+    document.dispatchEvent(
+      new CustomEvent('i18nready', {
+        detail: { language: getCurrentLanguage() },
+      }),
+    );
+  })();
 }
 
 /**

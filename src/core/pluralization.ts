@@ -16,7 +16,7 @@ export type PluralCategory = 'zero' | 'one' | 'two' | 'few' | 'many' | 'other';
 export function getPluralCategory(count: number, lang: Language): PluralCategory {
   try {
     const rules = new Intl.PluralRules(lang);
-    return rules.select(count) as PluralCategory;
+    return rules.select(count);
   } catch {
     return 'other';
   }

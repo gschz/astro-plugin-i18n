@@ -6,11 +6,10 @@
  * con {@link populateClientCache} antes de que los componentes rendericen.
  */
 
-import { useEffect, useState } from 'react';
 import type { Language, TranslationKey, TranslationOptions, TranslationValues } from '../types';
 import { getConfig } from './config';
-import { changeLanguage, getCurrentLanguage, setupLanguageObserver } from './language';
-import { resolvePluralKey } from './pluralization';
+import { getCurrentLanguage } from './language';
+import { applyVariables, resolvePluralKeyFromValues } from './translate-helpers';
 
 type RuntimeGlobal = typeof globalThis & {
   __ASTRO_I18N_CLIENT_TRANSLATIONS_CACHE__?: Record<string, string>;
@@ -101,37 +100,6 @@ export function populateClientCache(lang: Language, translations: Record<string,
 }
 
 /**
- * Traduce una clave de forma asíncrona cargando el archivo JSON si es necesario.
- *
- * Solo debe usarse en contextos donde `async/await` es posible (páginas SSR,
- * scripts de servidor). En el navegador, prefiere la función síncrona {@link t}
- * junto con {@link bootstrapClientI18n} para una experiencia sin parpadeo.
- *
- * @param key - Clave de traducción en notación de puntos.
- * @param options - Opciones de interpolación e idioma.
- * @returns Cadena traducida con variables reemplazadas.
- */
-export async function translateAsync(key: TranslationKey, options?: TranslationOptions): Promise<string> {
-  const lang = options?.lang || getCurrentLanguage();
-  const config = getConfig();
-  const rawKey = String(key);
-  const pluralKey = resolvePluralKeyFromValues(rawKey, lang, options?.values, config);
-
-  // Importación dinámica para evitar que Vite incluya módulos de Node.js
-  // (fs, path) en el bundle del cliente cuando se usa el entrypoint /client.
-  const { getTranslation, getTranslationValue } = await import('./translations');
-  let translation = pluralKey ? await getTranslationValue(pluralKey, lang) : null;
-
-  translation ??= await getTranslation(rawKey, lang);
-
-  if (options?.values) {
-    translation = applyVariables(translation, options.values);
-  }
-
-  return translation;
-}
-
-/**
  * Traduce una clave de forma **síncrona** desde la caché del cliente.
  *
  * Esta es la función principal para componentes en el navegador. Requiere que
@@ -161,6 +129,24 @@ export function t(key: TranslationKey, options?: TranslationOptions): string {
   }
 
   return applyMissingKeyStrategy(rawKey, key, lang, options?.values, config.missingKeyStrategy);
+}
+
+/**
+ * Verifica si una clave de traducción existe en la caché del cliente, incluyendo
+ * los idiomas de fallback configurados.
+ *
+ * @param key - Clave de traducción.
+ * @param options - Opciones de interpolación e idioma.
+ * @returns `true` si la traducción existe en caché, `false` de lo contrario.
+ */
+export function hasTranslation(key: TranslationKey, options?: TranslationOptions): boolean {
+  const config = getConfig();
+  const lang = options?.lang || getCurrentLanguage();
+  const rawKey = String(key);
+  const normalizedKey = normalizeTranslationKey(rawKey, config);
+  const pluralKey = resolvePluralKeyFromValues(normalizedKey, lang, options?.values, config);
+
+  return resolveTranslation(normalizedKey, pluralKey, lang, config) !== null;
 }
 
 /**
@@ -243,110 +229,6 @@ function normalizeTranslationKey(rawKey: string, config: ReturnType<typeof getCo
 
   const defaultNamespace = namespaceConfig.defaultNamespace ?? 'common';
   return `${defaultNamespace}${separator}${rawKey}`;
-}
-
-/**
- * Resuelve la clave plural basada en `values` y configuracion de pluralizacion.
- *
- * @param baseKey - Clave normalizada.
- * @param lang - Idioma activo.
- * @param values - Valores de interpolacion.
- * @param config - Configuracion i18n normalizada.
- * @returns Clave plural o `null` si no aplica.
- */
-function resolvePluralKeyFromValues(
-  baseKey: string,
-  lang: Language,
-  values: TranslationValues | undefined,
-  config: ReturnType<typeof getConfig>,
-): string | null {
-  if (!values) {
-    return null;
-  }
-
-  const pluralConfig = config.pluralization;
-
-  if (pluralConfig?.enabled === false) {
-    return null;
-  }
-
-  const field = pluralConfig?.field ?? 'count';
-  const rawCount = values[field];
-
-  if (rawCount === undefined || rawCount === null) {
-    return null;
-  }
-
-  const count = typeof rawCount === 'number' ? rawCount : Number(rawCount);
-
-  if (!Number.isFinite(count)) {
-    return null;
-  }
-
-  return resolvePluralKey(baseKey, count, lang);
-}
-
-/**
- * Reemplaza los placeholders `{variable}` en una cadena con los valores del mapa dado.
- *
- * @param text - Cadena con placeholders en formato `{clave}`.
- * @param values - Mapa de clave→valor para la sustitución.
- * @returns Cadena con todos los placeholders reemplazados.
- */
-function applyVariables(text: string, values: Record<string, string | number | boolean>): string {
-  return Object.entries(values).reduce((result, [key, value]) => {
-    const escapedKey = escapeRegExp(key);
-    return result.replaceAll(new RegExp(`{${escapedKey}}`, 'g'), String(value));
-  }, text);
-}
-
-function escapeRegExp(str: string): string {
-  return str.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
-}
-
-/**
- * Hook de React que expone las funciones de traducción y reacciona automáticamente
- * a los cambios de idioma.
- *
- * Se suscribe al evento `languagechange` mediante {@link setupLanguageObserver}
- * y actualiza el estado interno cuando el idioma cambia, provocando un re-render
- * de los componentes que lo usen.
- *
- * @returns Objeto con `language`, `changeLanguage` y `t` vinculada al idioma activo.
- *
- * @example
- * ```tsx
- * function Header() {
- *   const { t, language, changeLanguage } = useTranslation();
- *   return <h1>{t("home.title")}</h1>;
- * }
- * ```
- */
-export function useTranslation(): {
-  language: Language;
-  changeLanguage: typeof changeLanguage;
-  /** Versión de `t` pre-vinculada al idioma activo del hook. */
-  t: (key: TranslationKey, options?: Omit<TranslationOptions, 'lang'>) => string;
-} {
-  const [language, setLanguage] = useState<Language>(getCurrentLanguage());
-
-  useEffect(() => {
-    const unsubscribe = setupLanguageObserver((newLang) => {
-      setLanguage(newLang);
-    });
-
-    // Limpiamos el listener al desmontar el componente para evitar fugas de memoria.
-    return () => {
-      unsubscribe();
-    };
-  }, []);
-
-  return {
-    language,
-    changeLanguage,
-    /** Versión de `t` pre-vinculada al idioma activo del hook. */
-    t: (key: TranslationKey, options?: Omit<TranslationOptions, 'lang'>) => t(key, { ...options, lang: language }),
-  };
 }
 
 function resolveFallbackTranslation(
