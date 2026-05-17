@@ -24,7 +24,11 @@ export type {
 } from './types';
 
 // ── Traducción (cliente + servidor) ────────────────────────────────────────
-export { populateClientCache, t, translateAsync, useTranslation } from './core/translate';
+export { populateClientCache, t } from './core/translate';
+export { translateAsync } from './core/translate-async';
+
+// ── Hook React (re-exportado para compatibilidad con v1.x) ─────────────────
+export { useTranslation } from './core/react/useTranslation';
 
 // ── Gestión de idioma ──────────────────────────────────────────────────────
 export {
