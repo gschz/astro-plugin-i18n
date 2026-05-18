@@ -6,40 +6,54 @@
   <a href="https://deepwiki.com/gschz/astro-plugin-i18n"><img src="https://img.shields.io/badge/DeepWiki-gschz%2Fastro--plugin--i18n-blue.svg?logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACwAAAAyCAYAAAAnWDnqAAAAAXNSR0IArs4c6QAAA05JREFUaEPtmUtyEzEQhtWTQyQLHNak2AB7ZnyXZMEjXMGeK/AIi+QuHrMnbChYY7MIh8g01fJoopFb0uhhEqqcbWTp06/uv1saEDv4O3n3dV60RfP947Mm9/SQc0ICFQgzfc4CYZoTPAswgSJCCUJUnAAoRHOAUOcATwbmVLWdGoH//PB8mnKqScAhsD0kYP3j/Yt5LPQe2KvcXmGvRHcDnpxfL2zOYJ1mFwrryWTz0advv1Ut4CJgf5uhDuDj5eUcAUoahrdY/56ebRWeraTjMt/00Sh3UDtjgHtQNHwcRGOC98BJEAEymycmYcWwOprTgcB6VZ5JK5TAJ+fXGLBm3FDAmn6oPPjR4rKCAoJCal2eAiQp2x0vxTPB3ALO2CRkwmDy5WohzBDwSEFKRwPbknEggCPB/imwrycgxX2NzoMCHhPkDwqYMr9tRcP5qNrMZHkVnOjRMWwLCcr8ohBVb1OMjxLwGCvjTikrsBOiA6fNyCrm8V1rP93iVPpwaE+gO0SsWmPiXB+jikdf6SizrT5qKasx5j8ABbHpFTx+vFXp9EnYQmLx02h1QTTrl6eDqxLnGjporxl3NL3agEvXdT0WmEost648sQOYAeJS9Q7bfUVoMGnjo4AZdUMQku50McDcMWcBPvr0SzbTAFDfvJqwLzgxwATnCgnp4wDl6Aa+Ax283gghmj+vj7feE2KBBRMW3FzOpLOADl0Isb5587h/U4gGvkt5v60Z1VLG8BhYjbzRwyQZemwAd6cCR5/XFWLYZRIMpX39AR0tjaGGiGzLVyhse5C9RKC6ai42ppWPKiBagOvaYk8lO7DajerabOZP46Lby5wKjw1HCRx7p9sVMOWGzb/vA1hwiWc6jm3MvQDTogQkiqIhJV0nBQBTU+3okKCFDy9WwferkHjtxib7t3xIUQtHxnIwtx4mpg26/HfwVNVDb4oI9RHmx5WGelRVlrtiw43zboCLaxv46AZeB3IlTkwouebTr1y2NjSpHz68WNFjHvupy3q8TFn3Hos2IAk4Ju5dCo8B3wP7VPr/FGaKiG+T+v+TQqIrOqMTL1VdWV1DdmcbO8KXBz6esmYWYKPwDL5b5FA1a0hwapHiom0r/cKaoqr+27/XcrS5UwSMbQAAAABJRU5ErkJggg==" alt="DeepWiki"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="MIT License"></a>
   <a href="https://astro.build/"><img src="https://img.shields.io/badge/Astro-6%2B-FF5D01?style=flat-square&logo=astro" alt="Astro 6+"></a>
-  <a href="https://bun.sh/"><img src="https://img.shields.io/badge/Bun-1.3%2B-f0dba5?style=flat-square&logo=bun" alt="Bun 1.3+"></a>
 </p>
 
 <p align="center">
   Idioma: <strong>ES</strong> | <a href="README.en.md">EN</a>
 </p>
 
-Plugin de internacionalizacion (i18n) para Astro, orientado a simplicidad, arquitectura SSR-first y actualizacion reactiva en cliente.
+Plugin de internacionalizacion (i18n) para Astro: SSR-first, actualizacion reactiva en cliente y routing por locale en una sola integracion.
+
+**Version actual:** `1.3.11`
 
 ## Caracteristicas
 
-- SSR-first: evita FOUC y mejora SEO resolviendo traducciones desde servidor.
-- API separada por entorno: import seguro para browser via entrypoint dedicado `client`.
-- Cache en servidor y cliente para reducir I/O y costo de traduccion.
-- Integracion nativa con Astro (`integration` + middleware `pre`).
-- Soporte para React (`useTranslation`, `TranslatedText`, `LangToggle`).
-- Render declarativo en DOM con atributos `data-i18n-*`.
-- Generacion opcional de tipos literales de idioma y keys desde JSON (`generateTypes`).
+- **SSR-first** — traducciones resueltas en servidor para evitar FOUC y mejorar SEO.
+- **Routing por locale** — estrategias de prefijo URL (`prefix`, `prefix-except-default`, `manual`) con redirects automaticos.
+- **Resolucion de idioma por request** — segmento URL → cookie `i18n-lang` → `Accept-Language` → `defaultLang`.
+- **Traducciones JSON** — un archivo por idioma o **namespaces** (`common.json`, `home.json`, …).
+- **Interpolacion** — placeholders `{variable}` en las cadenas.
+- **Pluralizacion** — categorias CLDR con `Intl.PluralRules` (`count_zero`, `count_one`, `count_other`, …).
+- **Cadena de fallback** — claves faltantes se buscan en otro idioma antes de `missingKeyStrategy`.
+- **Lazy loading** — payload SSR reducido; bundles por idioma al llamar `changeLanguage()`.
+- **SEO** — `I18nHead.astro` genera `hreflang`, `x-default` y meta Open Graph de locale.
+- **React** — `useTranslation`, `TranslatedText`, `LangToggle` (peer dependency opcional).
+- **DOM declarativo** — atributos `data-i18n-*` con `bindDataI18n` / `renderDataI18n`.
+- **Generacion de tipos** — unions literales de idiomas y keys desde JSON (`generateTypes`).
+- **DX** — HMR de traducciones en dev, auditoria opcional en build (`auditOnBuild`), schema para `astro add`.
+- **Limites claros** — API segura para browser via `@gschz/astro-plugin-i18n/client`.
 
 ## Requisitos
 
-- Astro `>=6.0.0`
-- React `>=19.0.0` (opcional)
-- Bun `>=1.3.0` recomendado para desarrollo/publicacion
+- [Astro](https://docs.astro.build/) `>=6.x`
+- [React](https://react.dev/) `>=19.x` (opcional, para componentes y hooks React)
 
 ## Instalacion
 
 ```bash
 bun add @gschz/astro-plugin-i18n@latest
+# o: pnpm install @gschz/astro-plugin-i18n@latest
+```
+
+Con el CLI de Astro:
+
+```bash
+bun x astro add @gschz/astro-plugin-i18n
 ```
 
 ## Inicio rapido
 
-### 1. Configurar integracion
+### 1. Configurar la integracion
 
 ```js
 // astro.config.mjs
@@ -52,24 +66,34 @@ export default defineConfig({
       defaultLang: 'es',
       supportedLangs: ['es', 'en'],
       translationsDir: './src/i18n',
-      autoDetect: true,
-      generateTypes: true,
-      missingKeyStrategy: 'key',
     }),
   ],
 });
 ```
 
+Consulta [Configuracion destacada](#configuracion-destacada) para routing, namespaces, pluralizacion, fallback y lazy loading. Referencia completa: [docs/API.md](docs/API.md).
+
 ### 2. Crear archivos de traduccion
 
+**Legacy (un JSON por idioma):**
+
 ```text
-src/
-  i18n/
-    es.json
-    en.json
+src/i18n/
+  es.json
+  en.json
 ```
 
-Ejemplo rapido:
+**Namespaces (carpeta por idioma):**
+
+```text
+src/i18n/
+  es/
+    common.json
+  en/
+    common.json
+```
+
+Ejemplo (`es.json` o `es/common.json`):
 
 ```json
 {
@@ -79,7 +103,7 @@ Ejemplo rapido:
 }
 ```
 
-### 3. Inyectar bootstrap SSR en tu layout
+### 3. Inyectar bootstrap SSR en el layout
 
 ```astro
 ---
@@ -94,6 +118,7 @@ const i18nBootstrap = await getI18nClientBootstrapPayload(Astro.locals);
       window.__INITIAL_I18N_STATE__ = {
         lang: i18nBootstrap.lang,
         translations: i18nBootstrap.translations,
+        config: i18nBootstrap.config,
       };
       window.__INITIAL_I18N_ALL_TRANSLATIONS__ = i18nBootstrap.allTranslations;
     </script>
@@ -108,9 +133,11 @@ const i18nBootstrap = await getI18nClientBootstrapPayload(Astro.locals);
 </html>
 ```
 
+Con `lazyLoading.enabled`, `allTranslations` viene vacio a proposito; el cliente hace fetch al cambiar de idioma.
+
 ### 4. Consumir traducciones
 
-Astro SSR:
+**Astro (SSR):**
 
 ```astro
 ---
@@ -120,7 +147,7 @@ import I18nText from '@gschz/astro-plugin-i18n/components/I18nText.astro';
 <I18nText key="home.title" element="h1" />
 ```
 
-React:
+**React (isla cliente):**
 
 ```tsx
 import { TranslatedText, useTranslation } from '@gschz/astro-plugin-i18n';
@@ -138,73 +165,107 @@ export function Header() {
 ```
 
 > [!NOTE]
-> Para codigo que corre en browser, importa desde `@gschz/astro-plugin-i18n/client`.
-> Esto evita que el bundler arrastre modulos Node.js por error.
+> En codigo de browser, importa desde `@gschz/astro-plugin-i18n/client` para no incluir modulos Node.js (`fs`, `path`).
 
-## Arquitectura resumida
+## Configuracion destacada
 
-- Server/build: carga traducciones desde disco, gestiona config y genera tipos.
-- Middleware: inyecta config i18n en `Astro.locals` por request SSR.
-- Cliente: hidrata cache desde payload SSR, sincroniza idioma y rerenderiza UI.
+Ejemplos de configuraciones frecuentes; defaults y casos limite en [docs/API.md](docs/API.md).
+
+**Routing por locale** (`/` para el idioma por defecto, `/en/…` para el resto):
+
+```js
+i18n({
+  defaultLang: 'es',
+  supportedLangs: ['es', 'en'],
+  routing: {
+    strategy: 'prefix-except-default',
+    prefixDefaultLocale: false,
+    redirectToDefaultLocale: true,
+  },
+});
+```
+
+**Namespaces:**
+
+```js
+i18n({
+  namespaces: { enabled: true, defaultNamespace: 'common', separator: ':' },
+});
+// t('home:title') o t('title') → common:title
+```
+
+**Pluralizacion** (keys JSON `count_zero`, `count_one`, `count_other`):
+
+```ts
+t('notifications.count', { values: { count: 5 } });
+```
+
+**Cadena de fallback:**
+
+```js
+i18n({
+  defaultLang: 'en',
+  supportedLangs: ['en', 'es', 'pt-BR'],
+  fallback: { 'pt-BR': 'en' },
+});
+```
+
+**Lazy loading:**
+
+```js
+i18n({
+  lazyLoading: {
+    enabled: true,
+    publicPath: '/i18n',
+    preloadNamespaces: ['common'],
+  },
+});
+```
+
+## Demo oficial (aún en progreso)
+
+La app en [`demo/`](demo/) cubre es, en y pt-BR con routing, namespaces, pluralizacion, lazy loading, `I18nHead` e islas React. Ver [demo/README.md](demo/README.md).
+
+```bash
+cd demo && bun install && bun dev
+```
 
 ## Entry points
 
-| Entry point                                          | Uso recomendado                                                            |
-| ---------------------------------------------------- | -------------------------------------------------------------------------- |
-| `@gschz/astro-plugin-i18n`                           | API completa (SSR + cliente compartido + utilidades server/build).         |
-| `@gschz/astro-plugin-i18n/client`                    | API segura para browser (sin modulos server-only).                         |
-| `@gschz/astro-plugin-i18n/integration`               | Integracion para `astro.config.*`.                                         |
-| `@gschz/astro-plugin-i18n/components/I18nText.astro` | Componente Astro SSR.                                                      |
-| `@gschz/astro-plugin-i18n/middleware-entrypoint`     | Entry point avanzado para middleware (normalmente se registra automatico). |
+| Entry point                                          | Uso                                                       |
+| ---------------------------------------------------- | --------------------------------------------------------- |
+| `@gschz/astro-plugin-i18n`                           | API completa (SSR, utilidades server, componentes React). |
+| `@gschz/astro-plugin-i18n/client`                    | Solo API segura para browser.                             |
+| `@gschz/astro-plugin-i18n/integration`               | Integracion en `astro.config.*`.                          |
+| `@gschz/astro-plugin-i18n/schema`                    | Schema Zod (validar opciones en config).                  |
+| `@gschz/astro-plugin-i18n/components/I18nText.astro` | Componente SSR de traduccion.                             |
+| `@gschz/astro-plugin-i18n/components/I18nHead.astro` | SEO: `hreflang` / Open Graph.                             |
+| `@gschz/astro-plugin-i18n/middleware-entrypoint`     | Avanzado; suele registrarse automatico.                   |
 
-## Opciones de configuracion
+## API y componentes
 
-| Opcion               | Tipo                          | Default                            | Requerida en integracion |
-| -------------------- | ----------------------------- | ---------------------------------- | ------------------------ |
-| `defaultLang`        | `string`                      | `en` (normalizado por runtime)     | Si                       |
-| `supportedLangs`     | `string[]`                    | `['en']` (normalizado por runtime) | Si                       |
-| `translationsDir`    | `string`                      | `./src/i18n`                       | No                       |
-| `autoDetect`         | `boolean`                     | `true`                             | No                       |
-| `generateTypes`      | `boolean`                     | `false`                            | No                       |
-| `typesOutputPath`    | `string`                      | `./src/types/i18n-types.d.ts`      | No                       |
-| `missingKeyStrategy` | `'key' \| 'empty' \| 'error'` | `'key'`                            | No                       |
+Firmas, middleware, tipos, troubleshooting y ejemplos por API en **[docs/API.md](docs/API.md)**. Version en ingles: [docs/API.en.md](docs/API.en.md).
 
-`missingKeyStrategy`:
+Resumen:
 
-- `key`: devuelve la key.
-- `empty`: devuelve cadena vacia.
-- `error`: registra error y devuelve `[MISSING: key]`.
-
-## API principal
-
-Funciones de uso frecuente:
-
-- Traduccion: `t`, `translateAsync`, `useTranslation`, `populateClientCache`.
-- Idioma: `getCurrentLanguage`, `changeLanguage`, `setupLanguage`, `bootstrapClientI18n`.
-- DOM declarativo: `renderDataI18n`, `bindDataI18n` (via entrypoint `client`).
-- SSR helpers: `getI18nClientBootstrapPayload`, `isLanguageSupported`, `getLanguageRedirect`.
-- Config runtime: `getConfig`, `initConfig`, `updateConfig`, `resetConfig`.
-
-## Componentes
-
-- `I18nText.astro`: traduccion SSR en templates Astro.
-- `TranslatedText`: traduccion reactiva para React.
-- `LangToggle`: selector visual de idioma para React.
+| Area        | Exportaciones principales                                                          |
+| ----------- | ---------------------------------------------------------------------------------- |
+| Traduccion  | `t`, `translateAsync`, `useTranslation`, `populateClientCache`                     |
+| Idioma      | `getCurrentLanguage`, `changeLanguage`, `bootstrapClientI18n`, `syncLanguageRoute` |
+| SSR         | `getI18nClientBootstrapPayload`, `getLanguageRedirect`, `isLanguageSupported`      |
+| SEO         | `getAlternateLinks`, `getLocalizedPath`, `getOgLocaleMap` (+ `I18nHead.astro`)     |
+| DOM         | `renderDataI18n`, `bindDataI18n` (entrypoint `client`)                             |
+| Componentes | `I18nText.astro`, `I18nHead.astro`, `TranslatedText`, `LangToggle`                 |
 
 ## Documentacion
 
-Referencia del proyecto:
-
-- [docs/API.md](docs/API.md)
-
-DeepWiki:
-
-- [Overview](https://deepwiki.com/gschz/astro-plugin-i18n/1-overview)
-- [Getting Started](https://deepwiki.com/gschz/astro-plugin-i18n/1.1-getting-started)
-- [Project Structure and Build Pipeline](https://deepwiki.com/gschz/astro-plugin-i18n/1.2-project-structure-and-build-pipeline)
+- [docs/API.md](docs/API.md) — referencia de API (ES)
+- [docs/API.en.md](docs/API.en.md) — API reference (EN)
+- [README.en.md](README.en.md) — readme en ingles
+- [DeepWiki overview](https://deepwiki.com/gschz/astro-plugin-i18n/)
 
 ## Estado del proyecto
 
-Este paquete continua el mantenimiento de una linea publicada previamente como `@hkxdv/astro-plugin-i18n`, ahora bajo `@gschz/astro-plugin-i18n`.
+Este paquete continua el mantenimiento de la linea publicada como `@hkxdv/astro-plugin-i18n`, ahora bajo **`@gschz/astro-plugin-i18n`**.
 
-Publicaciones actuales y futuras: cuenta `gschz`.
+Las publicaciones actuales salen de la cuenta [gschz](https://github.com/gschz). Soporte multi-framework (Vue, Svelte, Solid) esta planificado para una version minor futura.
