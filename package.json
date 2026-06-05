@@ -58,9 +58,13 @@
   "files": [
     "dist"
   ],
+  "workspaces": [
+    "pkg/*"
+  ],
   "scripts": {
-    "build": "rimraf dist && tsdown && bun run build:cp-astro && bun run build:fix-imports",
-    "build:cp-astro": "copyfiles -u 2 \"src/components/**/*.astro\" dist/components",
+    "rm:dist": "bun run scripts/rm-dist.ts",
+    "build": "bun run rm:dist && tsdown && bun run build:cp-astro && bun run build:fix-imports",
+    "build:cp-astro": "bun run scripts/cp-astro.ts",
     "build:fix-imports": "bun run scripts/fix-astro-imports.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -69,10 +73,6 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "check": "astro check && tsc --noEmit",
-    "demo:dev": "cd demo && bun run dev",
-    "demo:check": "cd demo && bun run astro check",
-    "demo:build": "cd demo && bun run build",
-    "demo:preview": "cd demo && bun run preview",
     "version:rc": "npm version prerelease --preid rc --no-git-tag-version",
     "publish": "bun publish --access public",
     "publish:next": "bun publish --access public --tag next",
