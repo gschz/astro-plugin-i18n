@@ -42,15 +42,19 @@ For installation, feature overview, and quick start, see [README.en.md](../READM
 
 ## 1. Entry points
 
-| Entry point                                          | Environment  | Purpose                                            |
-| ---------------------------------------------------- | ------------ | -------------------------------------------------- |
-| `@gschz/astro-plugin-i18n`                           | SSR + shared | Full public API, server loaders, React components. |
-| `@gschz/astro-plugin-i18n/client`                    | Browser      | Safe subset (no `fs` / `path`).                    |
-| `@gschz/astro-plugin-i18n/integration`               | Build        | `createI18nIntegration` for `astro.config.*`.      |
-| `@gschz/astro-plugin-i18n/schema`                    | Build        | Zod schemas (`i18nPluginOptionsSchema`, …).        |
-| `@gschz/astro-plugin-i18n/components/I18nText.astro` | SSR          | Server-rendered translation tag.                   |
-| `@gschz/astro-plugin-i18n/components/I18nHead.astro` | SSR          | SEO link/meta tags.                                |
-| `@gschz/astro-plugin-i18n/middleware-entrypoint`     | SSR          | `onRequest` middleware (usually auto-registered).  |
+| Entry point                                          | Environment  | Purpose                                           |
+| ---------------------------------------------------- | ------------ | ------------------------------------------------- |
+| `@gschz/astro-plugin-i18n`                           | SSR + shared | Full public API, server loaders.                  |
+| `@gschz/astro-plugin-i18n/client`                    | Browser      | Safe subset (no `fs` / `path`).                   |
+| `@gschz/astro-plugin-i18n/react`                     | React        | `useTranslation` hook and UI components.          |
+| `@gschz/astro-plugin-i18n/vue`                       | Vue          | Reactive `useI18n` composable.                    |
+| `@gschz/astro-plugin-i18n/svelte`                    | Svelte       | Native Svelte store.                              |
+| `@gschz/astro-plugin-i18n/solid`                     | Solid        | Reactive `useI18n` hook.                          |
+| `@gschz/astro-plugin-i18n/integration`               | Build        | `createI18nIntegration` for `astro.config.*`.     |
+| `@gschz/astro-plugin-i18n/schema`                    | Build        | Zod schemas (`i18nPluginOptionsSchema`, …).       |
+| `@gschz/astro-plugin-i18n/components/I18nText.astro` | SSR          | Server-rendered translation tag.                  |
+| `@gschz/astro-plugin-i18n/components/I18nHead.astro` | SSR          | SEO link/meta tags.                               |
+| `@gschz/astro-plugin-i18n/middleware-entrypoint`     | SSR          | `onRequest` middleware (usually auto-registered). |
 
 `.astro` components are **not** re-exported from the main entry; import them by path as shown above.
 
@@ -443,11 +447,12 @@ const title = await translateAsync('home:title', { lang: getCurrentLanguage(Astr
 
 Flattens nested JSON into the client cache (used internally by bootstrap and lazy fetch).
 
-### `useTranslation()`
+### `useTranslation()` (React)
 
-React hook (optional peer `react`):
+React hook (import from `@gschz/astro-plugin-i18n/react`):
 
 ```ts
+import { useTranslation } from '@gschz/astro-plugin-i18n/react';
 const { language, changeLanguage, t } = useTranslation();
 ```
 
@@ -607,7 +612,9 @@ Outputs: `<link rel="alternate" hreflang="…">`, optional `x-default`, `<meta p
 ### 17.3 `TranslatedText` (React)
 
 ```tsx
-<TranslatedText textKey="home:title" as="h1" values={{ name: 'Ana' }} />
+import { TranslatedText } from '@gschz/astro-plugin-i18n/react';
+
+<TranslatedText textKey="home:title" as="h1" values={{ name: 'Ana' }} />;
 ```
 
 | Prop       | Description                                                             |
@@ -622,12 +629,14 @@ Outputs: `<link rel="alternate" hreflang="…">`, optional `x-default`, `<meta p
 ### 17.4 `LangToggle` (React)
 
 ```tsx
+import { LangToggle } from '@gschz/astro-plugin-i18n/react';
+
 <LangToggle
   languages={[
     { code: 'es', label: 'ES' },
     { code: 'en', label: 'EN' },
   ]}
-/>
+/>;
 ```
 
 | Prop          | Description                         |
@@ -637,6 +646,32 @@ Outputs: `<link rel="alternate" hreflang="…">`, optional `x-default`, `<meta p
 | `className`   | Wrapper class.                      |
 
 Uses `changeLanguage` and keeps selection in sync via `setupLanguageObserver`.
+
+### 17.5 Vue (`/vue`)
+
+```vue
+<script setup>
+import { useI18n } from '@gschz/astro-plugin-i18n/vue';
+const { t, language, changeLanguage } = useI18n();
+</script>
+```
+
+### 17.6 Svelte (`/svelte`)
+
+```svelte
+<script>
+  import { language, changeLanguage, t } from '@gschz/astro-plugin-i18n/svelte';
+</script>
+
+<p>{$language}</p>
+```
+
+### 17.7 Solid (`/solid`)
+
+```tsx
+import { useI18n } from '@gschz/astro-plugin-i18n/solid';
+const { t, language, changeLanguage } = useI18n();
+```
 
 ---
 
