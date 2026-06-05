@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { initConfig, resetConfig } from '../src/core/config';
-import TranslatedText from '../src/components/TranslatedText';
+import { TranslatedText } from '../src/components/react/TranslatedText';
 import { populateClientCache } from '../src/core/translate';
 
 function clearClientCache(): void {

@@ -7,5 +7,9 @@ export default defineConfig({
     clearMocks: true,
     restoreMocks: true,
     setupFiles: ['./tests/setup.ts'],
+  resolve: {
+    alias: {
+      '~/': new URL('./src/', import.meta.url).pathname,
+    },
   },
 });
