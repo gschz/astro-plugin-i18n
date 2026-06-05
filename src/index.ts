@@ -4,9 +4,6 @@
  * Expone la API pública completa del plugin: tipos, funciones de traducción,
  * gestión de idioma, configuración, carga de archivos (servidor) y componentes.
  *
- * Para código de cliente (browser), usa el entrypoint dedicado:
- * `@gschz/astro-plugin-i18n/client`
- *
  * @module @gschz/astro-plugin-i18n
  */
 
@@ -66,15 +63,15 @@ export {
 } from './core/setup';
 
 // ── SEO multilingüe ────────────────────────────────────────────────────────
-export { getAlternateLinks, getLocalizedPath, getOgLocaleMap, getXDefaultHref, langToOgLocale } from './core/seo';
+export {
+  getAlternateLinks,
+  getLocalizedPath,
+  getOgLocaleMap,
+  getXDefaultHref,
+  langToOgLocale,
+} from './core/seo';
 
-
-// ── DOM declarativo (browser-only) ─────────────────────────────────────────
-export { bindDataI18n, renderDataI18n } from './core/dom';
-export type { DataI18nBinderOptions, DataI18nRenderOptions } from './core/dom';
-
-// ── Integración y utilidades de build ──────────────────────────────────────
-export { default as createI18nIntegration } from './integration';
+// ── Utilidades de build ────────────────────────────────────────────────────
 export { generateTranslationTypes } from './utils/type-generator';
 
 // ── Auditoría de cobertura (server-only) ───────────────────────────────────
