@@ -29,9 +29,6 @@ export type {
 export { populateClientCache, t } from './core/translate';
 export { translateAsync } from './core/translate-async';
 
-// ── Hook React (re-exportado para compatibilidad con v1.x) ─────────────────
-export { useTranslation } from './core/react/useTranslation';
-
 // ── Gestión de idioma ──────────────────────────────────────────────────────
 export {
   bootstrapClientI18n,
@@ -71,9 +68,6 @@ export {
 // ── SEO multilingüe ────────────────────────────────────────────────────────
 export { getAlternateLinks, getLocalizedPath, getOgLocaleMap, getXDefaultHref, langToOgLocale } from './core/seo';
 
-// ── Componentes ────────────────────────────────────────────────────────────
-export { LangToggle } from './components/LangToggle';
-export { TranslatedText } from './components/TranslatedText';
 
 // ── DOM declarativo (browser-only) ─────────────────────────────────────────
 export { bindDataI18n, renderDataI18n } from './core/dom';

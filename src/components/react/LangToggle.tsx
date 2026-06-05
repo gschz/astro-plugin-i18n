@@ -1,7 +1,7 @@
-import * as React from 'react';
-import { setupLanguageObserver } from '../core/language';
-import { useTranslation } from '../core/react/useTranslation';
-import type { Language } from '../types';
+import { useRef, useState, useEffect } from 'react';
+import { setupLanguageObserver } from '~/core/language';
+import { useTranslation } from './useTranslation';
+import type { Language } from '~/types/index';
 
 /** Props del selector de idioma para React. */
 interface LangToggleProps {
@@ -16,6 +16,10 @@ interface LangToggleProps {
   }>;
   /** Idioma inicial opcional; si no se indica, usa el idioma global activo. */
   currentLang?: Language;
+  /** Texto descriptivo (sr-only) para lectores de pantalla. */
+  ariaLabel?: string;
+  /** Icono personalizado opcional a través de children. Si no se provee, se usará el icono por defecto. */
+  children?: React.ReactNode;
 }
 
 /**
@@ -25,14 +29,21 @@ interface LangToggleProps {
  * disparando `changeLanguage` y `syncLanguageRoute`, de forma que el idioma
  * activo, la URL localizada y los observers registrados queden alineados.
  */
-export const LangToggle: React.FC<LangToggleProps> = ({ className = '', languages, currentLang }) => {
+export const LangToggle: React.FC<LangToggleProps> = ({
+  className = '',
+  languages,
+  currentLang,
+  ariaLabel = 'Change language',
+  children,
+}) => {
   const { language, changeLanguage } = useTranslation();
-  const [selectedLang, setSelectedLang] = React.useState<Language>(currentLang || language);
-  const [isOpen, setIsOpen] = React.useState(false);
-  const dropdownRef = React.useRef<HTMLDivElement>(null);
+  const [selectedLang, setSelectedLang] = useState<Language>(
+    currentLang || language,
+  );
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  React.useEffect(() => {
-    // Si otro componente cambia el idioma, reflejamos el nuevo valor en el dropdown.
+  useEffect(() => {
     const unsubscribe = setupLanguageObserver((newLang) => {
       setSelectedLang(newLang);
     });
@@ -41,10 +52,12 @@ export const LangToggle: React.FC<LangToggleProps> = ({ className = '', language
     return unsubscribe;
   }, [currentLang, language]);
 
-  React.useEffect(() => {
-    // Cerramos el menú al hacer click fuera para que el dropdown no quede abierto.
+  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false);
       }
     };
@@ -68,12 +81,18 @@ export const LangToggle: React.FC<LangToggleProps> = ({ className = '', language
   };
 
   if (!languages || languages.length === 0) {
-    console.error("LangToggle component requires a non-empty 'languages' prop.");
+    console.error(
+      "LangToggle component requires a non-empty 'languages' prop.",
+    );
     return null;
   }
 
   return (
-    <div className={`lang-dropdown ${className}`} ref={dropdownRef} style={{ position: 'relative' }}>
+    <div
+      className={`lang-dropdown ${className}`}
+      ref={dropdownRef}
+      style={{ position: 'relative' }}
+    >
       <button
         type="button"
         onClick={toggleDropdown}
@@ -95,7 +114,7 @@ export const LangToggle: React.FC<LangToggleProps> = ({ className = '', language
           height: '2.5rem',
         }}
       >
-        <LanguagesIcon />
+        {children || <LanguagesIcon />}
         <span
           style={{
             position: 'absolute',
@@ -109,7 +128,7 @@ export const LangToggle: React.FC<LangToggleProps> = ({ className = '', language
             borderWidth: '0',
           }}
         >
-          Cambiar idioma
+          {ariaLabel}
         </span>
       </button>
 
@@ -124,7 +143,8 @@ export const LangToggle: React.FC<LangToggleProps> = ({ className = '', language
             zIndex: 50,
             background: 'white',
             borderRadius: '0.375rem',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+            boxShadow:
+              '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
             border: '1px solid rgb(229, 231, 235)',
             padding: '0.5rem',
           }}
@@ -141,7 +161,10 @@ export const LangToggle: React.FC<LangToggleProps> = ({ className = '', language
                 padding: '0.5rem 0.75rem',
                 fontSize: '0.875rem',
                 borderRadius: '0.25rem',
-                backgroundColor: selectedLang === lang.code ? 'rgb(243, 244, 246)' : 'transparent',
+                backgroundColor:
+                  selectedLang === lang.code
+                    ? 'rgb(243, 244, 246)'
+                    : 'transparent',
                 cursor: 'pointer',
                 transition: 'background-color 0.2s',
                 border: 'none',
@@ -157,7 +180,6 @@ export const LangToggle: React.FC<LangToggleProps> = ({ className = '', language
   );
 };
 
-/** Icono inline para evitar depender de una librería de iconos externa. */
 const LanguagesIcon = () => (
   <svg
     width="1.2rem"
