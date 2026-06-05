@@ -9,7 +9,10 @@ import globals from 'globals';
 
 export default [
   {
-    ignores: ['dist/**', '.astro/**', 'node_modules/**', 'demo/.astro/**', 'demo/dist/**', 'demo/node_modules/**'],
+    ignores: [
+      '{dist,.astro,node_modules}/**',
+      'pkg/{demo,template}/{.astro,dist,node_modules}/**',
+    ],
   },
   js.configs.recommended,
   {

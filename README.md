@@ -14,8 +14,6 @@
 
 Plugin de internacionalizacion (i18n) para Astro: SSR-first, actualizacion reactiva en cliente y routing por locale en una sola integracion.
 
-**Version actual:** `1.3.11`
-
 ## Caracteristicas
 
 - **SSR-first** — traducciones resueltas en servidor para evitar FOUC y mejorar SEO.
@@ -27,7 +25,7 @@ Plugin de internacionalizacion (i18n) para Astro: SSR-first, actualizacion react
 - **Cadena de fallback** — claves faltantes se buscan en otro idioma antes de `missingKeyStrategy`.
 - **Lazy loading** — payload SSR reducido; bundles por idioma al llamar `changeLanguage()`.
 - **SEO** — `I18nHead.astro` genera `hreflang`, `x-default` y meta Open Graph de locale.
-- **React** — `useTranslation`, `TranslatedText`, `LangToggle` (peer dependency opcional).
+- **Multi-framework** — Hooks y stores nativos para React (`/react`), Vue (`/vue`), Svelte (`/svelte`) y Solid (`/solid`).
 - **DOM declarativo** — atributos `data-i18n-*` con `bindDataI18n` / `renderDataI18n`.
 - **Generacion de tipos** — unions literales de idiomas y keys desde JSON (`generateTypes`).
 - **DX** — HMR de traducciones en dev, auditoria opcional en build (`auditOnBuild`), schema para `astro add`.
@@ -147,25 +145,22 @@ import I18nText from '@gschz/astro-plugin-i18n/components/I18nText.astro';
 <I18nText key="home.title" element="h1" />
 ```
 
-**React (isla cliente):**
+**Islas UI (Ejemplo en Vue):**
 
-```tsx
-import { TranslatedText, useTranslation } from '@gschz/astro-plugin-i18n';
+```vue
+<script setup>
+import { useI18n } from '@gschz/astro-plugin-i18n/vue';
 
-export function Header() {
-  const { changeLanguage } = useTranslation();
+const { t, changeLanguage } = useI18n();
+</script>
 
-  return (
-    <header>
-      <TranslatedText textKey="home.title" as="h1" />
-      <button onClick={() => changeLanguage('en')}>EN</button>
-    </header>
-  );
-}
+<template>
+  <button @click="changeLanguage('en')">{{ t('home.title') }}</button>
+</template>
 ```
 
 > [!NOTE]
-> En codigo de browser, importa desde `@gschz/astro-plugin-i18n/client` para no incluir modulos Node.js (`fs`, `path`).
+> El plugin expone utilidades reactivas para **React** (`/react`), **Vue** (`/vue`), **Svelte** (`/svelte`) y **Solid** (`/solid`). En código de browser independiente de framework, importa desde `@gschz/astro-plugin-i18n/client`.
 
 ## Configuracion destacada
 
@@ -234,8 +229,12 @@ cd demo && bun install && bun dev
 
 | Entry point                                          | Uso                                                       |
 | ---------------------------------------------------- | --------------------------------------------------------- |
-| `@gschz/astro-plugin-i18n`                           | API completa (SSR, utilidades server, componentes React). |
+| `@gschz/astro-plugin-i18n`                           | API central (SSR, utilidades server, configuración).      |
 | `@gschz/astro-plugin-i18n/client`                    | Solo API segura para browser.                             |
+| `@gschz/astro-plugin-i18n/react`                     | Hook y componentes para React.                            |
+| `@gschz/astro-plugin-i18n/vue`                       | Composable reactivo para Vue.                             |
+| `@gschz/astro-plugin-i18n/svelte`                    | Store nativo para Svelte.                                 |
+| `@gschz/astro-plugin-i18n/solid`                     | Hook reactivo para Solid.                                 |
 | `@gschz/astro-plugin-i18n/integration`               | Integracion en `astro.config.*`.                          |
 | `@gschz/astro-plugin-i18n/schema`                    | Schema Zod (validar opciones en config).                  |
 | `@gschz/astro-plugin-i18n/components/I18nText.astro` | Componente SSR de traduccion.                             |
@@ -268,4 +267,4 @@ Resumen:
 
 Este paquete continua el mantenimiento de la linea publicada como `@hkxdv/astro-plugin-i18n`, ahora bajo **`@gschz/astro-plugin-i18n`**.
 
-Las publicaciones actuales salen de la cuenta [gschz](https://github.com/gschz). Soporte multi-framework (Vue, Svelte, Solid) esta planificado para una version minor futura.
+Las publicaciones actuales salen de la cuenta [gschz](https://github.com/gschz).

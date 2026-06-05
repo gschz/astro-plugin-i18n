@@ -2,8 +2,12 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { initConfig, resetConfig, updateConfig } from '../src/core/config';
-import { clearTranslationsCache, getTranslation, loadTranslations } from '../src/core/translations';
+import { initConfig, resetConfig, updateConfig } from '~/core/config';
+import {
+  clearTranslationsCache,
+  getTranslation,
+  loadTranslations,
+} from '~/core/translations';
 
 function createTempDir(): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'astro-i18n-plugin-tests-'));
@@ -84,9 +88,13 @@ describe('translations core', () => {
     });
 
     await expect(getTranslation('demo.title', 'es')).resolves.toBe('Titulo');
-    await expect(getTranslation('demo.group.nested', 'es')).resolves.toBe('Valor');
+    await expect(getTranslation('demo.group.nested', 'es')).resolves.toBe(
+      'Valor',
+    );
 
-    await expect(getTranslation('demo.missing', 'es')).resolves.toBe('demo.missing');
+    await expect(getTranslation('demo.missing', 'es')).resolves.toBe(
+      'demo.missing',
+    );
 
     updateConfig({ missingKeyStrategy: 'empty' });
     await expect(getTranslation('demo.missing', 'es')).resolves.toBe('');
@@ -94,7 +102,9 @@ describe('translations core', () => {
     updateConfig({ missingKeyStrategy: 'error' });
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    await expect(getTranslation('demo.missing', 'es')).resolves.toBe('[MISSING: demo.missing]');
+    await expect(getTranslation('demo.missing', 'es')).resolves.toBe(
+      '[MISSING: demo.missing]',
+    );
     expect(errorSpy).toHaveBeenCalled();
   });
 
@@ -125,7 +135,9 @@ describe('translations core', () => {
     });
 
     await expect(getTranslation('demo.title', 'fr')).resolves.toBe('Titulo PT');
-    await expect(getTranslation('demo.unknown', 'fr')).resolves.toBe('demo.unknown');
+    await expect(getTranslation('demo.unknown', 'fr')).resolves.toBe(
+      'demo.unknown',
+    );
   });
 
   it('evita ciclos en cadena de fallback y aplica missingKeyStrategy', async () => {
@@ -155,7 +167,9 @@ describe('translations core', () => {
     });
 
     await expect(getTranslation('demo.title', 'fr')).resolves.toBe('Titre FR');
-    await expect(getTranslation('demo.missing', 'fr')).resolves.toBe('demo.missing');
+    await expect(getTranslation('demo.missing', 'fr')).resolves.toBe(
+      'demo.missing',
+    );
   });
 
   it('resuelve namespaces y aplica defaultNamespace en servidor', async () => {
@@ -184,7 +198,9 @@ describe('translations core', () => {
       },
     });
 
-    await expect(getTranslation('auth:login.title', 'es')).resolves.toBe('Ingresar');
+    await expect(getTranslation('auth:login.title', 'es')).resolves.toBe(
+      'Ingresar',
+    );
     await expect(getTranslation('nav.home', 'es')).resolves.toBe('Inicio');
   });
 });

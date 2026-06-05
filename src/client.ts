@@ -38,7 +38,3 @@ export {
 } from './core/language';
 
 export { populateClientCache, t } from './core/translate';
-
-// useTranslation vive en su propio módulo para no acoplar React al core.
-// Se re-exporta aquí para mantener compatibilidad total con v1.x
-export { useTranslation } from './core/react/useTranslation';
