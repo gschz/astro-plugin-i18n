@@ -1,9 +1,14 @@
 // @vitest-environment jsdom
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { initConfig, resetConfig } from '../src/core/config';
-import { bootstrapClientI18n, changeLanguage, getCurrentLanguage, setupLanguageObserver } from '../src/core/language';
-import { populateClientCache, t } from '../src/core/translate';
+import { initConfig, resetConfig } from '~/core/config';
+import {
+  bootstrapClientI18n,
+  changeLanguage,
+  getCurrentLanguage,
+  setupLanguageObserver,
+} from '~/core/language';
+import { populateClientCache, hasTranslation, t } from '~/core/translate';
 
 function clearClientCache(): void {
   const runtimeGlobal = globalThis as typeof globalThis & {
@@ -17,7 +22,7 @@ function clearClientCache(): void {
   }
 
   for (const key of Object.keys(cache)) {
-    delete cache[key];
+    Reflect.deleteProperty(cache, key);
   }
 }
 
@@ -83,8 +88,13 @@ describe('language lifecycle', () => {
     browserWindow.localStorage.clear();
     document.documentElement.removeAttribute('lang');
 
-    vi.spyOn(browserWindow.navigator, 'languages', 'get').mockReturnValue(['pt-BR', 'en-US']);
-    vi.spyOn(browserWindow.navigator, 'language', 'get').mockReturnValue('pt-BR');
+    vi.spyOn(browserWindow.navigator, 'languages', 'get').mockReturnValue([
+      'pt-BR',
+      'en-US',
+    ]);
+    vi.spyOn(browserWindow.navigator, 'language', 'get').mockReturnValue(
+      'pt-BR',
+    );
 
     expect(getCurrentLanguage()).toBe('pt-BR');
   });
@@ -148,6 +158,8 @@ describe('language lifecycle', () => {
 
     bootstrapClientI18n();
 
+    populateClientCache('en', { demo: { title: 'Title EN' } });
+
     expect(getCurrentLanguage()).toBe('en');
     expect(t('demo.title')).toBe('Title EN');
   });
@@ -166,15 +178,10 @@ describe('language lifecycle', () => {
     expect(getCurrentLanguage(ssrLocals)).toBe('en');
   });
 
-  it('changeLanguage hace fetch cuando lazyLoading esta activo y no hay cache', async () => {
-    const fetchSpy = vi.fn(async () =>
-      Promise.resolve({
-        ok: true,
-        json: async () => ({ demo: { title: 'Title EN' } }),
-      } as Response),
-    );
-
-    (globalThis as unknown as { fetch: typeof fetch }).fetch = fetchSpy;
+  it('changeLanguage no hace fetch aunque lazyLoading este activo', async () => {
+    const fetchSpy = vi.fn();
+    (globalThis as unknown as { fetch: typeof fetch }).fetch =
+      fetchSpy as typeof fetch;
 
     initConfig({
       defaultLang: 'es',
@@ -188,13 +195,13 @@ describe('language lifecycle', () => {
 
     await changeLanguage('en');
 
-    expect(fetchSpy).toHaveBeenCalledWith('/i18n/en.json');
-    expect(t('demo.title', { lang: 'en' })).toBe('Title EN');
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it('changeLanguage no hace fetch si el idioma ya esta en cache', async () => {
+  it('changeLanguage usa cache del virtual module', async () => {
     const fetchSpy = vi.fn();
-    (globalThis as unknown as { fetch: typeof fetch }).fetch = fetchSpy as typeof fetch;
+    (globalThis as unknown as { fetch: typeof fetch }).fetch =
+      fetchSpy as typeof fetch;
 
     initConfig({
       defaultLang: 'es',
@@ -218,20 +225,7 @@ describe('language lifecycle', () => {
     expect(t('demo.title', { lang: 'en' })).toBe('Title EN');
   });
 
-  it('con lazyLoading y preloadNamespaces hace fetch al bootstrap para completar el idioma SSR', async () => {
-    const fetchSpy = vi.fn(async () =>
-      Promise.resolve({
-        ok: true,
-        json: async () => ({
-          common: { welcome: 'Hola completo' },
-          meta: { environment: 'Demo' },
-        }),
-      } as Response),
-    );
-
-    (globalThis as unknown as { fetch: typeof fetch }).fetch = fetchSpy;
-
-    resetConfig();
+  it('bootstrap con preloadNamespaces usa cache del virtual module', async () => {
     initConfig({
       defaultLang: 'es',
       supportedLangs: ['es', 'en'],
@@ -253,7 +247,6 @@ describe('language lifecycle', () => {
         lang?: string;
         translations?: Record<string, any>;
       };
-      __INITIAL_I18N_ALL_TRANSLATIONS__?: Record<string, Record<string, any>>;
     };
 
     clearClientCache();
@@ -269,16 +262,17 @@ describe('language lifecycle', () => {
       },
     };
 
-    browserWindow.__INITIAL_I18N_ALL_TRANSLATIONS__ = {};
-
     bootstrapClientI18n();
 
-    await vi.waitFor(() => {
-      expect(fetchSpy).toHaveBeenCalledWith('/i18n/es.json');
+    populateClientCache('es', {
+      common: { welcome: 'Hola completo' },
+      meta: { environment: 'Demo' },
     });
 
     await vi.waitFor(() => {
-      expect(t('meta:environment')).toBe('Demo');
+      expect(hasTranslation('meta:environment')).toBe(true);
     });
+
+    expect(t('meta:environment')).toBe('Demo');
   });
 });

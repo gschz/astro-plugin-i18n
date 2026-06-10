@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { initConfig, resetConfig, updateConfig } from '../src/core/config';
-import { populateClientCache, t } from '../src/core/translate';
+import { initConfig, resetConfig, updateConfig } from '~/core/config';
+import { populateClientCache, t } from '~/core/translate';
 
 function clearClientCache(): void {
   const runtimeGlobal = globalThis as typeof globalThis & {
@@ -14,7 +14,7 @@ function clearClientCache(): void {
   }
 
   for (const key of Object.keys(cache)) {
-    delete cache[key];
+    Reflect.deleteProperty(cache, key);
   }
 }
 
@@ -47,7 +47,9 @@ describe('translate API (client cache)', () => {
 
   it('aplica estrategia missingKeyStrategy=error', () => {
     updateConfig({ missingKeyStrategy: 'error' });
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {
+      /* empty */
+    });
 
     expect(t('demo.missing')).toBe('[MISSING: demo.missing]');
     expect(errorSpy).toHaveBeenCalledTimes(1);
