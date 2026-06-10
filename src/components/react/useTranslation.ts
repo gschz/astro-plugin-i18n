@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react';
-import type {
-  Language,
-  TranslationKey,
-  TranslationOptions,
-} from '~/types/index';
 import {
   changeLanguage,
   getCurrentLanguage,
   setupLanguageObserver,
 } from '~/core/language';
 import { t } from '~/core/translate';
+import type {
+  Language,
+  TranslationKey,
+  TranslationOptions,
+} from '~/types/index';
 
 /**
  * Hook de React que expone las funciones de traducción y reacciona automáticamente
