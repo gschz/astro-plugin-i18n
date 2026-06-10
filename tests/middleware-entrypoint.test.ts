@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { onRequest, setOptions } from '../src/middleware-entrypoint';
+import { onRequest, setOptions } from '~/middleware-entrypoint';
 
+// eslint-disable-next-line @typescript-eslint/no-invalid-void-type
 function expectResponse(value: void | Response): Response {
   expect(value).toBeInstanceOf(Response);
   return value as Response;
@@ -116,12 +117,16 @@ describe('middleware entrypoint', () => {
     const response = expectResponse(await onRequest(context, next));
 
     expect(response.status).toBe(302);
-    expect(response.headers.get('location')).toBe('https://example.dev/es/docs');
+    expect(response.headers.get('location')).toBe(
+      'https://example.dev/es/docs',
+    );
     expect(next).not.toHaveBeenCalled();
   });
 
   it('tolera ausencia de opciones y locals no objeto', async () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {
+      /* empty */
+    });
     const next = vi.fn(async () => new Response('ok', { status: 200 }));
 
     const response = expectResponse(
@@ -141,5 +146,40 @@ describe('middleware entrypoint', () => {
     expect(response.status).toBe(200);
     expect(next).toHaveBeenCalledTimes(1);
     expect(warnSpy).toHaveBeenCalled();
+  });
+
+  it('lee opciones inlinadas via vite.define cuando no se llamo a setOptions (simula runtime serverless)', async () => {
+    setOptions(null);
+    delete (globalThis as Record<string, unknown>).__ASTRO_I18N_OPTIONS__;
+
+    const baked = JSON.stringify({
+      defaultLang: 'es',
+      supportedLangs: ['es', 'en', 'pt-BR'],
+      routing: {
+        strategy: 'prefix-except-default',
+        prefixDefaultLocale: false,
+        redirectToDefaultLocale: true,
+      },
+      fallback: { 'pt-BR': 'en' },
+    });
+    (globalThis as Record<string, unknown>).__ASTRO_I18N_RUNTIME_OPTIONS__ =
+      baked;
+
+    const next = vi.fn(async () => new Response('ok', { status: 200 }));
+    const context = {
+      locals: {},
+      url: new URL('https://example.dev/pt-BR/docs'),
+      request: new Request('https://example.dev/pt-BR/docs'),
+      cookies: { get: vi.fn(() => undefined) },
+    } as any;
+
+    const response = expectResponse(await onRequest(context, next));
+
+    expect(response.status).toBe(200);
+    expect(context.locals.i18n.config.defaultLang).toBe('es');
+    expect(context.locals.i18n.lang).toBe('pt-BR');
+
+    delete (globalThis as Record<string, unknown>)
+      .__ASTRO_I18N_RUNTIME_OPTIONS__;
   });
 });

@@ -1,9 +1,10 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { initConfig, resetConfig, updateConfig } from '~/core/config';
 import {
+  bundleAllTranslations,
   clearTranslationsCache,
   getTranslation,
   loadTranslations,
@@ -58,6 +59,10 @@ describe('translations core', () => {
       translationsDir: tmp,
     });
 
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {
+      /* empty */
+    });
+
     const missing = await loadTranslations('es');
     expect(missing).toEqual({});
 
@@ -66,6 +71,8 @@ describe('translations core', () => {
 
     const invalid = await loadTranslations('es');
     expect(invalid).toEqual({});
+
+    errorSpy.mockRestore();
   });
 
   it('resuelve claves anidadas y aplica missingKeyStrategy', async () => {
@@ -100,7 +107,9 @@ describe('translations core', () => {
     await expect(getTranslation('demo.missing', 'es')).resolves.toBe('');
 
     updateConfig({ missingKeyStrategy: 'error' });
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {
+      /* empty */
+    });
 
     await expect(getTranslation('demo.missing', 'es')).resolves.toBe(
       '[MISSING: demo.missing]',
@@ -202,5 +211,98 @@ describe('translations core', () => {
       'Ingresar',
     );
     await expect(getTranslation('nav.home', 'es')).resolves.toBe('Inicio');
+  });
+
+  describe('baked translations via vite.define (serverless)', () => {
+    afterEach(() => {
+      Reflect.deleteProperty(globalThis, '__ASTRO_I18N_TRANSLATIONS__');
+    });
+
+    it('carga desde globalThis.__ASTRO_I18N_TRANSLATIONS__ si el define no esta disponible', async () => {
+      const tmp = createTempDir();
+
+      try {
+        writeJson(path.join(tmp, 'es.json'), { greeting: 'Hola' });
+        writeJson(path.join(tmp, 'en.json'), { greeting: 'Hello' });
+
+        initConfig({
+          defaultLang: 'es',
+          supportedLangs: ['es', 'en'],
+          translationsDir: tmp,
+        });
+
+        // Simulamos el valor que Vite inyectaria via `vite.define`.
+        const allTranslations = await bundleAllTranslations();
+        (globalThis as typeof globalThis & Record<string, unknown>).__ASTRO_I18N_TRANSLATIONS__ =
+          JSON.stringify(allTranslations);
+
+        clearTranslationsCache();
+        const es = await loadTranslations('es');
+        expect(es.greeting).toBe('Hola');
+
+        clearTranslationsCache();
+        const en = await loadTranslations('en');
+        expect(en.greeting).toBe('Hello');
+      } finally {
+        fs.rmSync(tmp, { recursive: true, force: true });
+      }
+    });
+
+    it('cae a disco si no hay baked translations', async () => {
+      const tmp = createTempDir();
+
+      try {
+        writeJson(path.join(tmp, 'es.json'), { greeting: 'Hola' });
+
+        initConfig({
+          defaultLang: 'es',
+          supportedLangs: ['es'],
+          translationsDir: tmp,
+        });
+
+        // Sin globalThis.__ASTRO_I18N_TRANSLATIONS__ debe leer del disco.
+        clearTranslationsCache();
+        const es = await loadTranslations('es');
+        expect(es.greeting).toBe('Hola');
+      } finally {
+        fs.rmSync(tmp, { recursive: true, force: true });
+      }
+    });
+
+    it('carga namespaces desde baked translations', async () => {
+      const tmp = createTempDir();
+
+      try {
+        writeJson(path.join(tmp, 'es', 'common.json'), {
+          nav: { home: 'Inicio' },
+        });
+        writeJson(path.join(tmp, 'es', 'auth.json'), {
+          login: { title: 'Ingresar' },
+        });
+
+        initConfig({
+          defaultLang: 'es',
+          supportedLangs: ['es'],
+          translationsDir: tmp,
+          namespaces: {
+            enabled: true,
+            defaultNamespace: 'common',
+            separator: ':',
+          },
+        });
+
+        const allTranslations = await bundleAllTranslations();
+        (globalThis as typeof globalThis & Record<string, unknown>).__ASTRO_I18N_TRANSLATIONS__ =
+          JSON.stringify(allTranslations);
+
+        clearTranslationsCache();
+        await expect(getTranslation('auth:login.title', 'es')).resolves.toBe(
+          'Ingresar',
+        );
+        await expect(getTranslation('nav.home', 'es')).resolves.toBe('Inicio');
+      } finally {
+        fs.rmSync(tmp, { recursive: true, force: true });
+      }
+    });
   });
 });
