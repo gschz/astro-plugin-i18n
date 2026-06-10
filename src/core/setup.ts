@@ -7,10 +7,14 @@
  */
 
 import type { I18nPluginOptions, Language } from '../types';
+import { debugLog } from '../utils/debug';
 import { getConfig, getSupportedLanguages } from './config';
 import { getCurrentLanguage } from './language';
-import { getTranslationsForLanguage, clearTranslationsCache } from './translations';
 import { getRoutingRedirect } from './routing';
+import {
+  clearTranslationsCache,
+  getTranslationsForLanguage,
+} from './translations';
 
 /**
  * Estructura de estado inicial para hidratar i18n en el cliente.
@@ -94,7 +98,8 @@ export async function getI18nClientBootstrapPayload(
 
   let initialTranslations = translations;
   const lazyLoading = config.lazyLoading;
-  const preloadNamespaces = options?.preloadNamespaces ?? lazyLoading?.preloadNamespaces;
+  const preloadNamespaces =
+    options?.preloadNamespaces ?? lazyLoading?.preloadNamespaces;
 
   if (
     lazyLoading?.enabled &&
@@ -113,7 +118,9 @@ export async function getI18nClientBootstrapPayload(
     initialTranslations = filtered;
   }
 
-  const localsConfig = locals?.i18n?.config as Partial<I18nPluginOptions> | undefined;
+  const localsConfig = locals?.i18n?.config as
+    | Partial<I18nPluginOptions>
+    | undefined;
 
   let supportedLangs = [lang];
   if (localsConfig?.supportedLangs && localsConfig.supportedLangs.length > 0) {
@@ -122,18 +129,21 @@ export async function getI18nClientBootstrapPayload(
     supportedLangs = config.supportedLangs;
   }
 
-  const allTranslations = lazyLoading?.enabled
-    ? ({} as Record<Language, Record<string, any>>)
-    : (Object.fromEntries(
-        await Promise.all(
-          supportedLangs.map(async (supportedLang) => [supportedLang, await getTranslationsForLanguage(supportedLang)]),
-        ),
-      ) as Record<Language, Record<string, any>>);
+  // Debug: permite diagnosticar si el config proviene de baked options o defaults
+  debugLog(
+    `[i18n:bootstrap] lang=${lang}, ` +
+      `config.defaultLang=${config.defaultLang}, ` +
+      `config.supportedLangs=[${config.supportedLangs?.join(', ')}], ` +
+      `config.routing.strategy=${config.routing?.strategy}`,
+  );
 
+  // Con virtual module, allTranslations ya está en el bundle del cliente
+  // (populateClientCache se ejecuta al importar client.ts).
+  // Devolvemos objeto vacío por backward compat con el tipo del payload.
   return {
     lang,
     translations: initialTranslations,
-    allTranslations,
+    allTranslations: {} as Record<Language, Record<string, any>>,
     supportedLangs,
     config,
   };
