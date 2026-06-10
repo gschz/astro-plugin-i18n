@@ -7,9 +7,8 @@
  * sin necesidad de importar el módulo de configuración directamente.
  */
 
-import { defineMiddleware } from 'astro/middleware';
 import type { APIContext, MiddlewareNext } from 'astro';
-import type { I18nPluginOptions, Language } from './types';
+import { defineMiddleware } from 'astro/middleware';
 import {
   getPathLanguage,
   getRoutingRedirect,
@@ -17,6 +16,7 @@ import {
   resolveDefaultLanguage,
   resolveSupportedLanguages,
 } from './core/routing';
+import type { I18nPluginOptions, Language } from './types';
 import { debugLog } from './utils/debug';
 
 /**
@@ -25,7 +25,54 @@ import { debugLog } from './utils/debug';
  */
 let validatedOptions: Partial<I18nPluginOptions> | null = null;
 
-type LanguageResolutionContext = Pick<APIContext, 'url' | 'request' | 'cookies'>;
+/**
+ * Constante inlinada por Vite en build time cuando la integracion
+ * `createI18nIntegration` se registra en `astro.config.*`. Se usa como primer
+ * fallback de {@link getOptions} para que el middleware tenga las opciones
+ * disponibles en runtimes serverless (Vercel, Cloudflare, Netlify) donde
+ * `globalThis` del build no llega al runtime.
+ *
+ * Se declara como `string` (no `Partial<I18nPluginOptions>`) para evitar que
+ * Vite intente serializar el objeto directamente y mantener el JSON portable
+ * entre runtimes.
+ *
+ * El identificador se accede a traves de un helper que combina:
+ *  - el lookup bare (Vite `define` lo reemplaza por un literal string), y
+ *  - un fallback en `globalThis.__ASTRO_I18N_RUNTIME_OPTIONS__` que permite
+ *    tests y consumidores avanzados fijar las opciones en runtime.
+ */
+declare const __ASTRO_I18N_RUNTIME_OPTIONS__: string | undefined;
+
+function readBakedOptions(): string | undefined {
+  // 1. Camino "build": Vite inlinea el identificador con un literal string.
+  if (
+    typeof __ASTRO_I18N_RUNTIME_OPTIONS__ === 'string' &&
+    __ASTRO_I18N_RUNTIME_OPTIONS__.length > 0
+  ) {
+    return __ASTRO_I18N_RUNTIME_OPTIONS__;
+  }
+
+  // 2. Camino "test / consumidor avanzado": permite setear el JSON en globalThis
+  //    sin depender de la sustitucion de Vite.
+  if (typeof globalThis !== 'undefined') {
+    try {
+      const fromGlobal = (
+        globalThis as { __ASTRO_I18N_RUNTIME_OPTIONS__?: unknown }
+      ).__ASTRO_I18N_RUNTIME_OPTIONS__;
+      if (typeof fromGlobal === 'string' && fromGlobal.length > 0) {
+        return fromGlobal;
+      }
+    } catch {
+      // Ignoramos entornos donde globalThis es read-only.
+    }
+  }
+  return undefined;
+}
+
+type LanguageResolutionContext = Pick<
+  APIContext,
+  'url' | 'request' | 'cookies'
+>;
 
 /**
  * Almacena las opciones del plugin para que el middleware pueda acceder a ellas
@@ -51,8 +98,13 @@ export function setOptions(options: Partial<I18nPluginOptions> | null): void {
 }
 
 /**
- * Recupera las opciones almacenadas, consultando primero la variable de módulo
- * y luego el fallback en `globalThis.__ASTRO_I18N_OPTIONS__`.
+ * Recupera las opciones almacenadas siguiendo este orden:
+ * 1. Variable de modulo `validatedOptions` (seteada por {@link setOptions}).
+ * 2. `globalThis.__ASTRO_I18N_OPTIONS__` (seteada por {@link setOptions}
+ *    como respaldo, util en `astro dev` y reimports de modulo).
+ * 3. Constante inlinada `__ASTRO_I18N_RUNTIME_OPTIONS__` que la integracion
+ *    registra via `vite.define` en `astro:config:setup`. Es la unica fuente
+ *    fiable en runtimes serverless porque se serializa en el bundle.
  *
  * @returns Opciones del plugin o `null` si no se han configurado.
  */
@@ -72,7 +124,22 @@ function getOptions(): Partial<I18nPluginOptions> | null {
     }
   }
 
-  console.warn('[i18n] No se encontraron opciones en el middleware. Verifica la configuración de la integración.');
+  // Fallback de runtime serverless: opciones inlinadas por Vite en build time.
+  const bakedRaw = readBakedOptions();
+  if (bakedRaw) {
+    try {
+      const baked = JSON.parse(bakedRaw) as Partial<I18nPluginOptions>;
+      if (baked && typeof baked === 'object') {
+        return baked;
+      }
+    } catch {
+      // Si el JSON esta corrupto, seguimos con el flujo normal.
+    }
+  }
+
+  console.warn(
+    '[i18n] No se encontraron opciones en el middleware. Verifica la configuración de la integración.',
+  );
   return null;
 }
 

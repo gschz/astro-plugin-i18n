@@ -10,6 +10,10 @@ export default defineConfig({
   resolve: {
     alias: {
       '~/': new URL('./src/', import.meta.url).pathname,
+      'virtual:@gschz/astro-plugin-i18n/internal': new URL(
+        './tests/__mocks__/virtual-i18n-internal.ts',
+        import.meta.url,
+      ).pathname,
     },
   },
 });

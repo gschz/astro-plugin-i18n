@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import { initConfig, resetConfig } from '../src/core/config';
-import { bindDataI18n } from '../src/core/dom';
-import { bootstrapClientI18n, changeLanguage } from '../src/core/language';
+import { initConfig, resetConfig } from '~/core/config';
+import { bindDataI18n } from '~/core/dom';
+import { bootstrapClientI18n, changeLanguage } from '~/core/language';
+import { populateClientCache } from '~/core/translate';
 
 function setBootstrapGlobals(): void {
   const runtimeWindow = window as Window & {
@@ -11,7 +12,6 @@ function setBootstrapGlobals(): void {
       lang?: string;
       translations?: Record<string, any>;
     };
-    __INITIAL_I18N_ALL_TRANSLATIONS__?: Record<string, Record<string, any>>;
   };
 
   runtimeWindow.__INITIAL_I18N_STATE__ = {
@@ -20,21 +20,6 @@ function setBootstrapGlobals(): void {
       demo: {
         title: 'Hola',
         welcome: 'Hola {name}',
-      },
-    },
-  };
-
-  runtimeWindow.__INITIAL_I18N_ALL_TRANSLATIONS__ = {
-    es: {
-      demo: {
-        title: 'Hola',
-        welcome: 'Hola {name}',
-      },
-    },
-    en: {
-      demo: {
-        title: 'Hello',
-        welcome: 'Hello {name}',
       },
     },
   };
@@ -55,6 +40,9 @@ describe('bindDataI18n', () => {
 
     setBootstrapGlobals();
     bootstrapClientI18n();
+    populateClientCache('en', {
+      demo: { title: 'Hello', welcome: 'Hello {name}' },
+    });
   });
 
   it('renderiza data-i18n-key inicial y rerenderiza al cambiar idioma', () => {
@@ -94,7 +82,9 @@ describe('bindDataI18n', () => {
 
     expect(document.getElementById('title')?.textContent).toBe('');
 
-    document.dispatchEvent(new CustomEvent('i18nready', { detail: { language: 'es' } }));
+    document.dispatchEvent(
+      new CustomEvent('i18nready', { detail: { language: 'es' } }),
+    );
 
     expect(document.getElementById('title')?.textContent).toBe('Hola');
     cleanup();

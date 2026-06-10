@@ -7,6 +7,7 @@
  * junto con {@link populateClientCache} desde `./translate`.
  */
 
+import type { Dirent } from 'node:fs';
 import fsPromises from 'node:fs/promises';
 import path from 'node:path';
 import type { Language } from '../types';
@@ -19,6 +20,63 @@ import { getConfig } from './config';
  * Se invalida explícitamente con {@link clearTranslationsCache}.
  */
 const translationsCache: Record<Language, Record<string, any>> = {};
+
+/**
+ * Identificador inlinado por Vite (via `vite.define`) en el hook
+ * `astro:config:setup` de la integracion. Contiene todas las traducciones
+ * de todos los idiomas soportados en un solo string JSON, lo que evita
+ * lecturas de disco en runtimes serverless (Vercel, Netlify, Cloudflare).
+ *
+ * {@link readBakedTranslations} es el unico punto de acceso a este valor.
+ */
+declare const __ASTRO_I18N_TRANSLATIONS__: string | undefined;
+
+/**
+ * Intenta leer las traducciones del identificador inlinado por Vite
+ * `__ASTRO_I18N_TRANSLATIONS__` o del fallback en `globalThis`.
+ * Es el primer intento antes de caer a lectura de disco, lo que permite
+ * que el plugin funcione en serverless sin archivos de traduccion fisicos.
+ *
+ * @param lang - Idioma solicitado.
+ * @returns Traducciones del idioma, o `undefined` si no estan disponibles.
+ */
+function readBakedTranslations(
+  lang: Language,
+): Record<string, any> | undefined {
+  if (
+    typeof __ASTRO_I18N_TRANSLATIONS__ === 'string' &&
+    __ASTRO_I18N_TRANSLATIONS__.length > 0
+  ) {
+    try {
+      const all = JSON.parse(__ASTRO_I18N_TRANSLATIONS__) as Record<
+        Language,
+        Record<string, any>
+      >;
+      return all[lang];
+    } catch {
+      // JSON corrupto, seguimos con el siguiente mecanismo.
+    }
+  }
+
+  if (typeof globalThis !== 'undefined') {
+    try {
+      const fromGlobal = (
+        globalThis as { __ASTRO_I18N_TRANSLATIONS__?: unknown }
+      ).__ASTRO_I18N_TRANSLATIONS__;
+      if (typeof fromGlobal === 'string' && fromGlobal.length > 0) {
+        const all = JSON.parse(fromGlobal) as Record<
+          Language,
+          Record<string, any>
+        >;
+        return all[lang];
+      }
+    } catch {
+      // globalThis no disponible o corrupto, ignoramos.
+    }
+  }
+
+  return undefined;
+}
 
 /**
  * Devuelve todas las traducciones para el idioma indicado.
@@ -50,6 +108,16 @@ export async function loadTranslations(lang: Language): Promise<Record<string, a
     return translationsCache[lang];
   }
 
+  // 1. Camino "build": las traducciones fueron inlineadas por Vite via
+  //    `vite.define` en la integración. Es el único camino disponible en
+  //    runtimes serverless donde `fs.readFile` falla.
+  const baked = readBakedTranslations(lang);
+  if (baked) {
+    translationsCache[lang] = baked;
+    return baked;
+  }
+
+  // 2. Camino "dev / local": leemos desde el disco (fallback histórico).
   try {
     const config = getConfig();
     const translationsDir = path.resolve(process.cwd(), config.translationsDir as string);
@@ -168,7 +236,7 @@ async function handleMissingTranslation(
  */
 export function clearTranslationsCache(): void {
   Object.keys(translationsCache).forEach((key) => {
-    delete translationsCache[key];
+    Reflect.deleteProperty(translationsCache, key);
   });
 }
 
@@ -274,7 +342,7 @@ async function loadNamespacedTranslations(
 ): Promise<Record<string, any> | null> {
   const langDir = path.join(translationsDir, lang);
 
-  let entries: Array<import('node:fs').Dirent>;
+  let entries: Dirent[];
 
   try {
     entries = await fsPromises.readdir(langDir, { withFileTypes: true });
@@ -371,6 +439,53 @@ function getErrorCode(error: unknown): string | undefined {
   }
 
   return undefined;
+}
+
+/**
+ * Carga **todas** las traducciones de todos los idiomas soportados y las
+ * devuelve como un unico mapa `{ [lang]: traducciones }`.
+ *
+ * Usado exclusivamente por la integracion (`integration.ts`) en el hook
+ * `astro:config:setup` para inlinear las traducciones via `vite.define`
+ * y evitar lecturas de disco en runtimes serverless.
+ *
+ * Reutiliza las mismas funciones internas de lectura que {@link loadTranslations}
+ * pero itera sobre todos los `supportedLangs` en paralelo.
+ *
+ * @returns Mapa de idioma a traducciones. Vacio si no se pudo leer ningun archivo.
+ */
+export async function bundleAllTranslations(): Promise<
+  Record<Language, Record<string, any>>
+> {
+  const config = getConfig();
+  const translationsDir = path.resolve(
+    process.cwd(),
+    config.translationsDir as string,
+  );
+  const useNamespaces = config.namespaces?.enabled === true;
+  const supportedLangs = config.supportedLangs ?? [];
+
+  const result: Record<Language, Record<string, any>> = {};
+
+  for (const lang of supportedLangs) {
+    try {
+      let translations: Record<string, any> | null = null;
+
+      if (useNamespaces) {
+        translations = await loadNamespacedTranslations(translationsDir, lang);
+      }
+
+      translations ??= await loadLegacyTranslationFile(translationsDir, lang);
+
+      if (translations && Object.keys(translations).length > 0) {
+        result[lang] = translations;
+      }
+    } catch {
+      // Si falla la carga de un idioma, continuamos con el siguiente.
+    }
+  }
+
+  return result;
 }
 
 /**

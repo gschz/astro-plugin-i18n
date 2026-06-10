@@ -1,11 +1,11 @@
 import { createElement, memo } from 'react';
 import { t as globalT } from '~/core/translate';
-import { useTranslation } from './useTranslation';
 import type {
   Language,
   TranslationKey,
   TranslationValues,
 } from '~/types/index';
+import { useTranslation } from './useTranslation';
 
 /** Props del componente React que renderiza una traducción. */
 interface TranslatedTextProps extends Omit<

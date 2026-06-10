@@ -16,9 +16,11 @@
  * - Si el consumidor ejecuta `generateTypes`, este registro se completa con
  *   uniones literales reales y la API pública queda tipada automáticamente.
  */
-export interface AstroI18nTypeRegistry {}
+export type AstroI18nTypeRegistry = object;
 
-type RegistryLanguage = AstroI18nTypeRegistry extends { Language: infer L } ? L : string;
+type RegistryLanguage = AstroI18nTypeRegistry extends { Language: infer L }
+  ? L
+  : string;
 
 type RegistryTranslationKey = AstroI18nTypeRegistry extends {
   TranslationKey: infer K;
@@ -32,7 +34,9 @@ type RegistryTranslationKey = AstroI18nTypeRegistry extends {
  * Por defecto es `string`, pero puede convertirse en una unión de literales
  * cuando `generateTypes` genera augmentation del registro.
  */
-export type Language = RegistryLanguage extends string ? RegistryLanguage : string;
+export type Language = RegistryLanguage extends string
+  ? RegistryLanguage
+  : string;
 
 /**
  * Clave de traducción, normalmente en notación de puntos (ej. `"home.title"`).
@@ -40,15 +44,15 @@ export type Language = RegistryLanguage extends string ? RegistryLanguage : stri
  * Por defecto es `string`, pero puede convertirse en una unión de literales
  * derivada de los JSON cuando `generateTypes` está activo.
  */
-export type TranslationKey = RegistryTranslationKey extends string ? RegistryTranslationKey : string;
+export type TranslationKey = RegistryTranslationKey extends string
+  ? RegistryTranslationKey
+  : string;
 
 /**
  * Valores de interpolación para reemplazar placeholders `{variable}` dentro
  * de una cadena de traducción.
  */
-export interface TranslationValues {
-  [key: string]: string | number | boolean;
-}
+export type TranslationValues = Record<string, string | number | boolean>;
 
 /**
  * Opciones opcionales que se pueden pasar a las funciones de traducción.
@@ -177,4 +181,14 @@ declare global {
    * Solo se escribe en contextos de servidor (Astro SSR/dev).
    */
   var __ASTRO_I18N_OPTIONS__: Partial<I18nPluginOptions> | undefined;
+
+  /**
+   * Opciones del plugin serializadas como JSON string e inlineadas por Vite
+   * via `vite.define` durante el build. Es la unica fuente fiable en runtimes
+   * serverless porque se escribe como literal string en el bundle compilado.
+   *
+   * Solo disponible en el bundle de servidor; en tests se simula asignando
+   * directamente a `globalThis.__ASTRO_I18N_RUNTIME_OPTIONS__`.
+   */
+  var __ASTRO_I18N_RUNTIME_OPTIONS__: string | undefined;
 }

@@ -1,19 +1,18 @@
-import { useRef, useState, useEffect } from 'react';
-import { setupLanguageObserver } from '~/core/language';
-import { useTranslation } from './useTranslation';
+import { useEffect, useRef, useState } from 'react';
 import type { Language } from '~/types/index';
+import { useTranslation } from './useTranslation';
 
 /** Props del selector de idioma para React. */
 interface LangToggleProps {
   /** Clase CSS adicional para el contenedor raíz del dropdown. */
   className?: string;
   /** Lista de idiomas seleccionables con código y etiqueta visible. */
-  languages: ReadonlyArray<{
+  languages: readonly {
     /** Código de idioma (ej: en, es, pt-BR). */
     code: Language;
     /** Etiqueta mostrada al usuario para el idioma. */
     label: string;
-  }>;
+  }[];
   /** Idioma inicial opcional; si no se indica, usa el idioma global activo. */
   currentLang?: Language;
   /** Texto descriptivo (sr-only) para lectores de pantalla. */
@@ -37,20 +36,9 @@ export const LangToggle: React.FC<LangToggleProps> = ({
   children,
 }) => {
   const { language, changeLanguage } = useTranslation();
-  const [selectedLang, setSelectedLang] = useState<Language>(
-    currentLang || language,
-  );
+  const selectedLang = currentLang || language;
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const unsubscribe = setupLanguageObserver((newLang) => {
-      setSelectedLang(newLang);
-    });
-
-    setSelectedLang(currentLang || language);
-    return unsubscribe;
-  }, [currentLang, language]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -70,7 +58,6 @@ export const LangToggle: React.FC<LangToggleProps> = ({
   }, []);
 
   const handleLanguageChange = (newLang: Language) => {
-    setSelectedLang(newLang);
     void changeLanguage(newLang);
     setIsOpen(false);
   };

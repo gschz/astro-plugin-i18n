@@ -17,6 +17,7 @@ export default defineConfig({
   clean: false,
   deps: {
     neverBundle: [
+      'virtual:@gschz/astro-plugin-i18n/internal',
       'astro',
       'astro/middleware',
       'astro/zod',
