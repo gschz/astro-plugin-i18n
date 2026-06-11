@@ -233,8 +233,9 @@ describe('translations core', () => {
 
         // Simulamos el valor que Vite inyectaria via `vite.define`.
         const allTranslations = await bundleAllTranslations();
-        (globalThis as typeof globalThis & Record<string, unknown>).__ASTRO_I18N_TRANSLATIONS__ =
-          JSON.stringify(allTranslations);
+        (
+          globalThis as typeof globalThis & Record<string, unknown>
+        ).__ASTRO_I18N_TRANSLATIONS__ = JSON.stringify(allTranslations);
 
         clearTranslationsCache();
         const es = await loadTranslations('es');
@@ -292,8 +293,9 @@ describe('translations core', () => {
         });
 
         const allTranslations = await bundleAllTranslations();
-        (globalThis as typeof globalThis & Record<string, unknown>).__ASTRO_I18N_TRANSLATIONS__ =
-          JSON.stringify(allTranslations);
+        (
+          globalThis as typeof globalThis & Record<string, unknown>
+        ).__ASTRO_I18N_TRANSLATIONS__ = JSON.stringify(allTranslations);
 
         clearTranslationsCache();
         await expect(getTranslation('auth:login.title', 'es')).resolves.toBe(

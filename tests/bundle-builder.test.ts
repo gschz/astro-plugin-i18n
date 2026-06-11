@@ -16,7 +16,9 @@ describe('bundle builder', () => {
 
   beforeEach(async () => {
     clearTranslationsCache();
-    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'astro-i18n-bundle-tests-'));
+    tmpDir = await fs.mkdtemp(
+      path.join(os.tmpdir(), 'astro-i18n-bundle-tests-'),
+    );
   });
 
   afterEach(async () => {
@@ -28,8 +30,12 @@ describe('bundle builder', () => {
   });
 
   it('combina namespaces de un idioma', async () => {
-    await writeJson(path.join(tmpDir, 'es', 'common.json'), { nav: { home: 'Inicio' } });
-    await writeJson(path.join(tmpDir, 'es', 'auth.json'), { login: { title: 'Iniciar sesion' } });
+    await writeJson(path.join(tmpDir, 'es', 'common.json'), {
+      nav: { home: 'Inicio' },
+    });
+    await writeJson(path.join(tmpDir, 'es', 'auth.json'), {
+      login: { title: 'Iniciar sesion' },
+    });
 
     initConfig({
       defaultLang: 'es',
@@ -47,8 +53,12 @@ describe('bundle builder', () => {
   });
 
   it('genera bundles para todos los idiomas', async () => {
-    await writeJson(path.join(tmpDir, 'es', 'common.json'), { nav: { home: 'Inicio' } });
-    await writeJson(path.join(tmpDir, 'en', 'common.json'), { nav: { home: 'Home' } });
+    await writeJson(path.join(tmpDir, 'es', 'common.json'), {
+      nav: { home: 'Inicio' },
+    });
+    await writeJson(path.join(tmpDir, 'en', 'common.json'), {
+      nav: { home: 'Home' },
+    });
 
     initConfig({
       defaultLang: 'es',
@@ -60,8 +70,12 @@ describe('bundle builder', () => {
     const outputDir = path.join(tmpDir, 'dist', 'i18n');
     await generateBundles(outputDir);
 
-    const esBundle = JSON.parse(await fs.readFile(path.join(outputDir, 'es.json'), 'utf-8'));
-    const enBundle = JSON.parse(await fs.readFile(path.join(outputDir, 'en.json'), 'utf-8'));
+    const esBundle = JSON.parse(
+      await fs.readFile(path.join(outputDir, 'es.json'), 'utf-8'),
+    );
+    const enBundle = JSON.parse(
+      await fs.readFile(path.join(outputDir, 'en.json'), 'utf-8'),
+    );
 
     expect(esBundle).toEqual({ common: { nav: { home: 'Inicio' } } });
     expect(enBundle).toEqual({ common: { nav: { home: 'Home' } } });

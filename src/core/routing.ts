@@ -7,7 +7,12 @@
  * - calculo de redirects segun estrategia.
  */
 
-import type { I18nPluginOptions, I18nRoutingOptions, I18nRoutingStrategy, Language } from '../types';
+import type {
+  I18nPluginOptions,
+  I18nRoutingOptions,
+  I18nRoutingStrategy,
+  Language,
+} from '../types';
 import { debugLog } from '../utils/debug';
 
 const VALID_ROUTING_STRATEGIES: ReadonlySet<I18nRoutingStrategy> = new Set([
@@ -41,7 +46,9 @@ function removeTrailingSlash(pathname: string): string {
 /**
  * Valida si un string es una estrategia de routing soportada.
  */
-export function isI18nRoutingStrategy(value: string): value is I18nRoutingStrategy {
+export function isI18nRoutingStrategy(
+  value: string,
+): value is I18nRoutingStrategy {
   return VALID_ROUTING_STRATEGIES.has(value as I18nRoutingStrategy);
 }
 
@@ -62,20 +69,26 @@ export function matchSupportedLanguage(
     return null;
   }
 
-  const exact = supportedLangs.find((lang) => lang.toLowerCase() === normalizedCandidate);
+  const exact = supportedLangs.find(
+    (lang) => lang.toLowerCase() === normalizedCandidate,
+  );
 
   if (exact) {
     return exact;
   }
 
   const candidateBase = normalizedCandidate.split('-')[0];
-  const baseExact = supportedLangs.find((lang) => lang.toLowerCase() === candidateBase);
+  const baseExact = supportedLangs.find(
+    (lang) => lang.toLowerCase() === candidateBase,
+  );
 
   if (baseExact) {
     return baseExact;
   }
 
-  const basePrefix = supportedLangs.find((lang) => lang.toLowerCase().split('-')[0] === candidateBase);
+  const basePrefix = supportedLangs.find(
+    (lang) => lang.toLowerCase().split('-')[0] === candidateBase,
+  );
 
   return basePrefix ?? null;
 }
@@ -83,16 +96,24 @@ export function matchSupportedLanguage(
 /**
  * Devuelve la lista de idiomas soportados con fallback robusto.
  */
-export function resolveSupportedLanguages(options: Partial<I18nPluginOptions>): Language[] {
+export function resolveSupportedLanguages(
+  options: Partial<I18nPluginOptions>,
+): Language[] {
   const configured = Array.isArray(options.supportedLangs)
-    ? options.supportedLangs.filter((lang): lang is Language => typeof lang === 'string' && lang.trim().length > 0)
+    ? options.supportedLangs.filter(
+        (lang): lang is Language =>
+          typeof lang === 'string' && lang.trim().length > 0,
+      )
     : [];
 
   if (configured.length > 0) {
     return configured;
   }
 
-  if (typeof options.defaultLang === 'string' && options.defaultLang.trim().length > 0) {
+  if (
+    typeof options.defaultLang === 'string' &&
+    options.defaultLang.trim().length > 0
+  ) {
     return [options.defaultLang];
   }
 
@@ -102,8 +123,14 @@ export function resolveSupportedLanguages(options: Partial<I18nPluginOptions>): 
 /**
  * Resuelve el idioma por defecto efectivo para la configuracion actual.
  */
-export function resolveDefaultLanguage(options: Partial<I18nPluginOptions>, supportedLangs: Language[]): Language {
-  const normalizedDefault = matchSupportedLanguage(options.defaultLang, supportedLangs);
+export function resolveDefaultLanguage(
+  options: Partial<I18nPluginOptions>,
+  supportedLangs: Language[],
+): Language {
+  const normalizedDefault = matchSupportedLanguage(
+    options.defaultLang,
+    supportedLangs,
+  );
 
   if (normalizedDefault) {
     return normalizedDefault;
@@ -115,24 +142,32 @@ export function resolveDefaultLanguage(options: Partial<I18nPluginOptions>, supp
 /**
  * Normaliza opciones de routing a un estado completo y consistente.
  */
-export function normalizeRoutingOptions(routing: I18nRoutingOptions | undefined): NormalizedRoutingOptions {
+export function normalizeRoutingOptions(
+  routing: I18nRoutingOptions | undefined,
+): NormalizedRoutingOptions {
   const strategy = routing?.strategy ?? 'manual';
 
   return {
     strategy,
     prefixDefaultLocale: routing?.prefixDefaultLocale ?? strategy === 'prefix',
-    redirectToDefaultLocale: routing?.redirectToDefaultLocale ?? strategy === 'prefix',
+    redirectToDefaultLocale:
+      routing?.redirectToDefaultLocale ?? strategy === 'prefix',
   };
 }
 
 /**
  * Obtiene el idioma del primer segmento de la ruta si es soportado.
  */
-export function getPathLanguage(pathname: string, supportedLangs: Language[]): Language | null {
+export function getPathLanguage(
+  pathname: string,
+  supportedLangs: Language[],
+): Language | null {
   const normalized = normalizePathname(pathname);
   const segment = normalized.split('/').find(Boolean);
   const result = matchSupportedLanguage(segment, supportedLangs);
-  debugLog(`[getPathLanguage] pathname=${pathname}, segment=${segment}, result=${result}`);
+  debugLog(
+    `[getPathLanguage] pathname=${pathname}, segment=${segment}, result=${result}`,
+  );
   return result;
 }
 
@@ -170,7 +205,10 @@ function stripLanguagePrefix(pathname: string, lang: Language): string {
 /**
  * Calcula si la URL actual requiere redirect de acuerdo a la estrategia de routing.
  */
-export function getRoutingRedirect(url: URL, options: Partial<I18nPluginOptions>): URL | null {
+export function getRoutingRedirect(
+  url: URL,
+  options: Partial<I18nPluginOptions>,
+): URL | null {
   const supportedLangs = resolveSupportedLanguages(options);
   const defaultLang = resolveDefaultLanguage(options, supportedLangs);
   const routing = normalizeRoutingOptions(options.routing);
@@ -190,7 +228,11 @@ export function getRoutingRedirect(url: URL, options: Partial<I18nPluginOptions>
     }
   } else if (pathLang === defaultLang && !routing.prefixDefaultLocale) {
     targetPathname = stripLanguagePrefix(currentPathname, defaultLang);
-  } else if (!pathLang && routing.redirectToDefaultLocale && routing.prefixDefaultLocale) {
+  } else if (
+    !pathLang &&
+    routing.redirectToDefaultLocale &&
+    routing.prefixDefaultLocale
+  ) {
     targetPathname = prefixPathWithLanguage(currentPathname, defaultLang);
   }
 

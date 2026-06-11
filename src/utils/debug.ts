@@ -12,7 +12,9 @@ function isDebugEnabled(): boolean {
 
   const value = process.env['ASTRO_I18N_DEBUG'];
 
-  return value !== undefined && value !== 'false' && value !== '0' && value !== '';
+  return (
+    value !== undefined && value !== 'false' && value !== '0' && value !== ''
+  );
 }
 
 export function debugLog(message: string, ...args: unknown[]): void {

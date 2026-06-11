@@ -88,7 +88,9 @@ function readBakedTranslations(
  * @param lang - Código de idioma (ej. `"en"`, `"es"`).
  * @returns Objeto JSON con todas las cadenas del idioma, o `{}` si no se encuentra el archivo.
  */
-export async function getTranslationsForLanguage(lang: Language): Promise<Record<string, any>> {
+export async function getTranslationsForLanguage(
+  lang: Language,
+): Promise<Record<string, any>> {
   return loadTranslations(lang);
 }
 
@@ -102,7 +104,9 @@ export async function getTranslationsForLanguage(lang: Language): Promise<Record
  * @param lang - Código de idioma (ej. `"en"`, `"es"`).
  * @returns Objeto JSON con las cadenas del idioma, o `{}` ante cualquier error.
  */
-export async function loadTranslations(lang: Language): Promise<Record<string, any>> {
+export async function loadTranslations(
+  lang: Language,
+): Promise<Record<string, any>> {
   // Cache hit: evitamos releer el disco en cada petición SSR.
   if (translationsCache[lang]) {
     return translationsCache[lang];
@@ -120,7 +124,10 @@ export async function loadTranslations(lang: Language): Promise<Record<string, a
   // 2. Camino "dev / local": leemos desde el disco (fallback histórico).
   try {
     const config = getConfig();
-    const translationsDir = path.resolve(process.cwd(), config.translationsDir as string);
+    const translationsDir = path.resolve(
+      process.cwd(),
+      config.translationsDir as string,
+    );
     const useNamespaces = config.namespaces?.enabled === true;
 
     let translations: Record<string, any> | null = null;
@@ -152,7 +159,10 @@ export async function loadTranslations(lang: Language): Promise<Record<string, a
  * @param lang - Idioma en que se busca la cadena.
  * @returns La cadena traducida, o el resultado de la estrategia de clave faltante.
  */
-export async function getTranslation(key: string, lang: Language): Promise<string> {
+export async function getTranslation(
+  key: string,
+  lang: Language,
+): Promise<string> {
   const config = getConfig();
   const normalizedKey = normalizeTranslationKey(key, config);
   const translations = await loadTranslations(lang);
@@ -176,7 +186,10 @@ export async function getTranslation(key: string, lang: Language): Promise<strin
  * @param lang - Idioma en que se busca la cadena.
  * @returns La cadena traducida, o `null` si no existe.
  */
-export async function getTranslationValue(key: string, lang: Language): Promise<string | null> {
+export async function getTranslationValue(
+  key: string,
+  lang: Language,
+): Promise<string | null> {
   const config = getConfig();
   const normalizedKey = normalizeTranslationKey(key, config);
   const translations = await loadTranslations(lang);
@@ -205,7 +218,11 @@ async function handleMissingTranslation(
 
   if (fallbackLang && !visited.has(fallbackLang)) {
     const fallbackTranslations = await loadTranslations(fallbackLang);
-    const fallbackResult = resolveTranslationValue(fallbackTranslations, key, config);
+    const fallbackResult = resolveTranslationValue(
+      fallbackTranslations,
+      key,
+      config,
+    );
 
     if (typeof fallbackResult === 'string') {
       return fallbackResult;
@@ -220,7 +237,9 @@ async function handleMissingTranslation(
     case 'empty':
       return '';
     case 'error':
-      console.error(`[i18n] Clave de traducción faltante: "${displayKey}" en idioma "${lang}"`);
+      console.error(
+        `[i18n] Clave de traducción faltante: "${displayKey}" en idioma "${lang}"`,
+      );
       return `[MISSING: ${displayKey}]`;
     case 'key':
     default:
@@ -247,7 +266,10 @@ export function clearTranslationsCache(): void {
  * @param config - Configuracion i18n normalizada.
  * @returns Clave lista para resolucion.
  */
-function normalizeTranslationKey(key: string, config: ReturnType<typeof getConfig>): string {
+function normalizeTranslationKey(
+  key: string,
+  config: ReturnType<typeof getConfig>,
+): string {
   const namespaceConfig = config.namespaces;
 
   if (!namespaceConfig?.enabled) {
@@ -285,7 +307,11 @@ function resolveTranslationValue(
 
   const separator = namespaceConfig.separator ?? ':';
   const defaultNamespace = namespaceConfig.defaultNamespace ?? 'common';
-  const { namespace, key: namespacedKey } = splitNamespacedKey(key, separator, defaultNamespace);
+  const { namespace, key: namespacedKey } = splitNamespacedKey(
+    key,
+    separator,
+    defaultNamespace,
+  );
 
   if (isNamespacedBundle(translations)) {
     const namespaceTranslations = translations[namespace];
@@ -294,7 +320,10 @@ function resolveTranslationValue(
       return undefined;
     }
 
-    return resolveNestedKey(namespaceTranslations as Record<string, any>, namespacedKey);
+    return resolveNestedKey(
+      namespaceTranslations as Record<string, any>,
+      namespacedKey,
+    );
   }
 
   // Bundle legacy: ignora el namespace y usa la clave plana.
@@ -309,7 +338,11 @@ function resolveTranslationValue(
  * @param defaultNamespace - Namespace por defecto.
  * @returns Namespace y clave sin prefijo.
  */
-function splitNamespacedKey(key: string, separator: string, defaultNamespace: string) {
+function splitNamespacedKey(
+  key: string,
+  separator: string,
+  defaultNamespace: string,
+) {
   if (key.includes(separator)) {
     const [namespace, ...rest] = key.split(separator);
     return { namespace, key: rest.join(separator) };
@@ -326,7 +359,10 @@ function splitNamespacedKey(key: string, separator: string, defaultNamespace: st
  */
 function isNamespacedBundle(translations: Record<string, any>): boolean {
   const values = Object.values(translations || {});
-  return values.length > 0 && values.every((value) => typeof value === 'object' && value !== null);
+  return (
+    values.length > 0 &&
+    values.every((value) => typeof value === 'object' && value !== null)
+  );
 }
 
 /**
@@ -353,14 +389,21 @@ async function loadNamespacedTranslations(
       return null;
     }
 
-    console.error(`[i18n] Error al leer el directorio de namespaces para "${lang}":`, error);
+    console.error(
+      `[i18n] Error al leer el directorio de namespaces para "${lang}":`,
+      error,
+    );
     return {};
   }
 
-  const namespaceFiles = entries.filter((entry) => entry.isFile() && entry.name.endsWith('.json'));
+  const namespaceFiles = entries.filter(
+    (entry) => entry.isFile() && entry.name.endsWith('.json'),
+  );
 
   if (namespaceFiles.length === 0) {
-    console.warn(`[i18n] No se encontraron namespaces JSON para el idioma "${lang}" en: ${langDir}`);
+    console.warn(
+      `[i18n] No se encontraron namespaces JSON para el idioma "${lang}" en: ${langDir}`,
+    );
     return null;
   }
 
@@ -369,7 +412,12 @@ async function loadNamespacedTranslations(
   for (const entry of namespaceFiles) {
     const namespace = path.basename(entry.name, '.json');
     const filePath = path.join(langDir, entry.name);
-    const namespaceTranslations = await readJsonFile(filePath, lang, `namespace "${namespace}"`, false);
+    const namespaceTranslations = await readJsonFile(
+      filePath,
+      lang,
+      `namespace "${namespace}"`,
+      false,
+    );
 
     if (namespaceTranslations) {
       namespaceBundle[namespace] = namespaceTranslations;
@@ -386,9 +434,17 @@ async function loadNamespacedTranslations(
  * @param lang - Idioma a cargar.
  * @returns Objeto de traducciones legacy.
  */
-async function loadLegacyTranslationFile(translationsDir: string, lang: Language): Promise<Record<string, any>> {
+async function loadLegacyTranslationFile(
+  translationsDir: string,
+  lang: Language,
+): Promise<Record<string, any>> {
   const filePath = path.join(translationsDir, `${lang}.json`);
-  const translations = await readJsonFile(filePath, lang, 'archivo de traducciones', true);
+  const translations = await readJsonFile(
+    filePath,
+    lang,
+    'archivo de traducciones',
+    true,
+  );
 
   return translations ?? {};
 }
@@ -416,7 +472,9 @@ async function readJsonFile(
 
     if (errorCode === 'ENOENT') {
       if (warnOnMissing) {
-        console.warn(`[i18n] No se encontró ${label} para el idioma "${lang}" en: ${filePath}`);
+        console.warn(
+          `[i18n] No se encontró ${label} para el idioma "${lang}" en: ${filePath}`,
+        );
       }
 
       return null;

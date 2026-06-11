@@ -4,7 +4,7 @@
 
 import type { Language, TranslationKey, TranslationValues } from '../types';
 import { getCurrentLanguage, setupLanguageObserver } from './language';
-import { t, hasTranslation } from './translate';
+import { hasTranslation, t } from './translate';
 
 export interface DataI18nRenderOptions {
   /** Nodo raíz donde buscar atributos `data-i18n-key` (por defecto `document`). */
@@ -14,7 +14,7 @@ export interface DataI18nRenderOptions {
   /** Nombre del atributo con variables JSON (por defecto `data-i18n-values`). */
   valuesAttribute?: string;
   /** Lista opcional de claves permitidas para validación runtime. */
-  allowedKeys?: ReadonlyArray<TranslationKey>;
+  allowedKeys?: readonly TranslationKey[];
 }
 
 export interface DataI18nBinderOptions extends DataI18nRenderOptions {
@@ -83,7 +83,9 @@ export function renderDataI18n(options: DataI18nRenderOptions = {}): void {
  */
 export function bindDataI18n(options: DataI18nBinderOptions = {}): () => void {
   if (typeof document === 'undefined') {
-    return () => {};
+    return () => {
+      /* empty */
+    };
   }
 
   const render = () => {

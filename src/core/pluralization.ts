@@ -13,7 +13,10 @@ export type PluralCategory = 'zero' | 'one' | 'two' | 'few' | 'many' | 'other';
  * @param lang - Codigo de idioma (ej. "es", "en").
  * @returns Categoria plural calculada por Intl.PluralRules.
  */
-export function getPluralCategory(count: number, lang: Language): PluralCategory {
+export function getPluralCategory(
+  count: number,
+  lang: Language,
+): PluralCategory {
   try {
     const rules = new Intl.PluralRules(lang);
     return rules.select(count);
@@ -33,7 +36,11 @@ export function getPluralCategory(count: number, lang: Language): PluralCategory
  * @param lang - Codigo de idioma.
  * @returns Clave plural con sufijo (ej. "items.count_one").
  */
-export function resolvePluralKey(baseKey: string, count: number, lang: Language): string {
+export function resolvePluralKey(
+  baseKey: string,
+  count: number,
+  lang: Language,
+): string {
   if (count === 0) {
     return `${baseKey}_zero`;
   }

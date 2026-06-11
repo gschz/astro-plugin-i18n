@@ -147,7 +147,10 @@ function getOptions(): Partial<I18nPluginOptions> | null {
  * Parsea `Accept-Language` y devuelve el primer idioma soportado según
  * prioridad por `q` (quality value) y orden original en caso de empate.
  */
-function parseAcceptLanguageHeader(headerValue: string | null, supportedLangs: Language[]): Language | null {
+function parseAcceptLanguageHeader(
+  headerValue: string | null,
+  supportedLangs: Language[],
+): Language | null {
   if (!headerValue) {
     return null;
   }
@@ -206,7 +209,9 @@ function parseAcceptLanguageHeader(headerValue: string | null, supportedLangs: L
     const match = matchSupportedLanguage(preference.lang, supportedLangs);
 
     if (match) {
-      debugLog(`[parseAcceptLanguageHeader] matched: ${preference.lang} -> ${match}`);
+      debugLog(
+        `[parseAcceptLanguageHeader] matched: ${preference.lang} -> ${match}`,
+      );
       return match;
     }
   }
@@ -218,7 +223,10 @@ function parseAcceptLanguageHeader(headerValue: string | null, supportedLangs: L
  * Resuelve el idioma de una request con prioridad:
  * 1) segmento URL, 2) cookie i18n-lang, 3) Accept-Language, 4) defaultLang.
  */
-function resolveLanguageFromRequest(context: LanguageResolutionContext, options: Partial<I18nPluginOptions>): Language {
+function resolveLanguageFromRequest(
+  context: LanguageResolutionContext,
+  options: Partial<I18nPluginOptions>,
+): Language {
   const supportedLangs = resolveSupportedLanguages(options);
   const defaultLang = resolveDefaultLanguage(options, supportedLangs);
 
@@ -230,16 +238,26 @@ function resolveLanguageFromRequest(context: LanguageResolutionContext, options:
   }
 
   // 2. Cookie de preferencia guardada
-  const cookieLang = matchSupportedLanguage(context.cookies?.get?.('i18n-lang')?.value, supportedLangs);
+  const cookieLang = matchSupportedLanguage(
+    context.cookies?.get?.('i18n-lang')?.value,
+    supportedLangs,
+  );
+
   if (cookieLang) {
     debugLog(`[middleware] idioma resuelto desde cookie: ${cookieLang}`);
     return cookieLang;
   }
 
   // 3. Header Accept-Language
-  const headerLang = parseAcceptLanguageHeader(context.request.headers.get('accept-language'), supportedLangs);
+  const headerLang = parseAcceptLanguageHeader(
+    context.request.headers.get('accept-language'),
+    supportedLangs,
+  );
+
   if (headerLang) {
-    debugLog(`[middleware] idioma resuelto desde Accept-Language: ${headerLang}`);
+    debugLog(
+      `[middleware] idioma resuelto desde Accept-Language: ${headerLang}`,
+    );
     return headerLang;
   }
 
@@ -249,6 +267,7 @@ function resolveLanguageFromRequest(context: LanguageResolutionContext, options:
 }
 
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace App {
     interface Locals {
       /** Contexto i18n inyectado por el middleware en cada petición SSR. */
@@ -269,40 +288,52 @@ declare global {
  * llamar a `getCurrentLanguage(Astro.locals)` para obtener el idioma correcto
  * en SSR sin depender de cookies, headers ni detección de navegador.
  */
-export const onRequest = defineMiddleware((context: APIContext, next: MiddlewareNext) => {
-  debugLog(`[middleware] processing request: ${context.url.pathname}`);
+export const onRequest = defineMiddleware(
+  (context: APIContext, next: MiddlewareNext) => {
+    debugLog(`[middleware] processing request: ${context.url.pathname}`);
 
-  const options = getOptions();
-  const activeOptions = options || {};
-  const redirectUrl = getRoutingRedirect(context.url, activeOptions);
+    const options = getOptions();
+    const activeOptions = options || {};
+    const redirectUrl = getRoutingRedirect(context.url, activeOptions);
 
-  if (redirectUrl) {
-    debugLog(`[middleware] redirecting ${context.url.pathname} → ${redirectUrl.pathname}`);
-    return Response.redirect(redirectUrl, 302);
-  }
-
-  const resolvedLanguage = resolveLanguageFromRequest(context, activeOptions);
-  debugLog(`[middleware] resolved language: ${resolvedLanguage} for ${context.url.pathname}`);
-
-  if (!options) {
-    console.warn('[i18n] No hay opciones disponibles en el middleware. Verifica la configuración de la integración.');
-  }
-
-  if (typeof context.locals === 'object' && context.locals !== null) {
-    context.locals.i18n ??= {};
-
-    // Inyectamos la config para que esté disponible durante el renderizado SSR.
-    context.locals.i18n.config = options || {};
-    context.locals.i18n.lang = resolvedLanguage;
-
-    if (!options?.defaultLang) {
-      console.warn('[i18n] `defaultLang` no configurado en el middleware. El idioma por defecto puede ser incorrecto.');
+    if (redirectUrl) {
+      debugLog(
+        `[middleware] redirecting ${context.url.pathname} → ${redirectUrl.pathname}`,
+      );
+      return Response.redirect(redirectUrl, 302);
     }
-  } else {
-    console.warn('[i18n] `context.locals` no es un objeto. El middleware no pudo inyectar la config i18n.');
-  }
 
-  return next();
-});
+    const resolvedLanguage = resolveLanguageFromRequest(context, activeOptions);
+    debugLog(
+      `[middleware] resolved language: ${resolvedLanguage} for ${context.url.pathname}`,
+    );
+
+    if (!options) {
+      console.warn(
+        '[i18n] No hay opciones disponibles en el middleware. Verifica la configuración de la integración.',
+      );
+    }
+
+    if (typeof context.locals === 'object' && context.locals !== null) {
+      context.locals.i18n ??= {};
+
+      // Inyectamos la config para que esté disponible durante el renderizado SSR.
+      context.locals.i18n.config = options || {};
+      context.locals.i18n.lang = resolvedLanguage;
+
+      if (!options?.defaultLang) {
+        console.warn(
+          '[i18n] `defaultLang` no configurado en el middleware. El idioma por defecto puede ser incorrecto.',
+        );
+      }
+    } else {
+      console.warn(
+        '[i18n] `context.locals` no es un objeto. El middleware no pudo inyectar la config i18n.',
+      );
+    }
+
+    return next();
+  },
+);
 
 export default onRequest;

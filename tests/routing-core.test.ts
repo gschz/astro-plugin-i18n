@@ -31,8 +31,12 @@ describe('routing core', () => {
     expect(resolveSupportedLanguages({})).toEqual(['en']);
 
     const supportedLangs = ['es', 'en'];
-    expect(resolveDefaultLanguage({ defaultLang: 'es' }, supportedLangs)).toBe('es');
-    expect(resolveDefaultLanguage({ defaultLang: 'fr' }, supportedLangs)).toBe('es');
+    expect(resolveDefaultLanguage({ defaultLang: 'es' }, supportedLangs)).toBe(
+      'es',
+    );
+    expect(resolveDefaultLanguage({ defaultLang: 'fr' }, supportedLangs)).toBe(
+      'es',
+    );
   });
 
   it('detecta idioma por segmento URL con match flexible', () => {
@@ -54,13 +58,16 @@ describe('routing core', () => {
   });
 
   it('calcula redirect con strategy=prefix-except-default', () => {
-    const redirect = getRoutingRedirect(new URL('https://example.dev/es/about'), {
-      defaultLang: 'es',
-      supportedLangs: ['es', 'en'],
-      routing: {
-        strategy: 'prefix-except-default',
+    const redirect = getRoutingRedirect(
+      new URL('https://example.dev/es/about'),
+      {
+        defaultLang: 'es',
+        supportedLangs: ['es', 'en'],
+        routing: {
+          strategy: 'prefix-except-default',
+        },
       },
-    });
+    );
 
     expect(redirect?.pathname).toBe('/about');
   });

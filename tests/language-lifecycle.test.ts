@@ -8,7 +8,7 @@ import {
   getCurrentLanguage,
   setupLanguageObserver,
 } from '~/core/language';
-import { populateClientCache, hasTranslation, t } from '~/core/translate';
+import { hasTranslation, populateClientCache, t } from '~/core/translate';
 
 function clearClientCache(): void {
   const runtimeGlobal = globalThis as typeof globalThis & {

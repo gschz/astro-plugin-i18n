@@ -1,7 +1,7 @@
-import { writable, derived, type Readable } from 'svelte/store';
+import { derived, writable, type Readable } from 'svelte/store';
 import {
-  getCurrentLanguage,
   changeLanguage as coreChangeLanguage,
+  getCurrentLanguage,
   setupLanguageObserver,
 } from '~/core/language';
 import { t as coreT } from '~/core/translate';

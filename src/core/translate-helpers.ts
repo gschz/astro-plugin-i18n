@@ -46,7 +46,10 @@ export function resolvePluralKeyFromValues(
 /**
  * Reemplaza los placeholders `{variable}` en una cadena con los valores del mapa dado.
  */
-export function applyVariables(text: string, values: Record<string, string | number | boolean>): string {
+export function applyVariables(
+  text: string,
+  values: Record<string, string | number | boolean>,
+): string {
   return Object.entries(values).reduce((result, [key, value]) => {
     const escapedKey = escapeRegExp(key);
     return result.replaceAll(new RegExp(`{${escapedKey}}`, 'g'), String(value));

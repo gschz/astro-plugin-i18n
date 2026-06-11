@@ -49,8 +49,14 @@ describe('translateAsync (server)', () => {
       },
     });
 
-    await expect(translateAsync('auth:login.title', { lang: 'es' })).resolves.toBe('Ingresar');
-    await expect(translateAsync('items.count', { lang: 'es', values: { count: 0 } })).resolves.toBe('No hay items');
-    await expect(translateAsync('items.count', { lang: 'es', values: { count: 2 } })).resolves.toBe('Hay 2 items');
+    await expect(
+      translateAsync('auth:login.title', { lang: 'es' }),
+    ).resolves.toBe('Ingresar');
+    await expect(
+      translateAsync('items.count', { lang: 'es', values: { count: 0 } }),
+    ).resolves.toBe('No hay items');
+    await expect(
+      translateAsync('items.count', { lang: 'es', values: { count: 2 } }),
+    ).resolves.toBe('Hay 2 items');
   });
 });

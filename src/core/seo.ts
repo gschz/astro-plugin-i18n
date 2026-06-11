@@ -3,7 +3,11 @@
  */
 
 import type { I18nPluginOptions, Language } from '../types';
-import { normalizeRoutingOptions, resolveDefaultLanguage, resolveSupportedLanguages } from './routing';
+import {
+  normalizeRoutingOptions,
+  resolveDefaultLanguage,
+  resolveSupportedLanguages,
+} from './routing';
 
 /**
  * Tabla de casos especiales para la conversión BCP-47 → OG locale.
@@ -83,7 +87,10 @@ function normalizePath(pathname: string): string {
   return pathname.startsWith('/') ? pathname : `/${pathname}`;
 }
 
-function stripLanguagePrefix(pathname: string, supportedLangs: Language[]): string {
+function stripLanguagePrefix(
+  pathname: string,
+  supportedLangs: Language[],
+): string {
   const normalizedPath = normalizePath(pathname);
   const segments = normalizedPath.split('/').filter(Boolean);
 
@@ -92,7 +99,9 @@ function stripLanguagePrefix(pathname: string, supportedLangs: Language[]): stri
   }
 
   const firstSegment = segments[0].toLowerCase();
-  const hasLangPrefix = supportedLangs.some((lang) => lang.toLowerCase() === firstSegment);
+  const hasLangPrefix = supportedLangs.some(
+    (lang) => lang.toLowerCase() === firstSegment,
+  );
 
   if (!hasLangPrefix) {
     return normalizedPath;
@@ -123,7 +132,11 @@ function buildPrefixedPath(basePath: string, lang: Language): string {
  * @param options - Opciones i18n activas para resolver estrategia y defaultLang.
  * @returns Path localizado listo para usarse en enlaces alternos.
  */
-export function getLocalizedPath(pathname: string, lang: Language, options: Partial<I18nPluginOptions>): string {
+export function getLocalizedPath(
+  pathname: string,
+  lang: Language,
+  options: Partial<I18nPluginOptions>,
+): string {
   const supportedLangs = resolveSupportedLanguages(options);
   const defaultLang = resolveDefaultLanguage(options, supportedLangs);
   const routing = normalizeRoutingOptions(options.routing);
@@ -156,7 +169,7 @@ export function getAlternateLinks(
   pathname: string,
   siteUrl: string,
   options: Partial<I18nPluginOptions>,
-): Array<{ lang: Language; href: string }> {
+): { lang: Language; href: string }[] {
   const supportedLangs = resolveSupportedLanguages(options);
 
   return supportedLangs.map((lang) => {
@@ -176,7 +189,11 @@ export function getAlternateLinks(
  * @param options - Configuracion i18n activa.
  * @returns URL absoluta para el idioma por defecto efectivo.
  */
-export function getXDefaultHref(pathname: string, siteUrl: string, options: Partial<I18nPluginOptions>): string {
+export function getXDefaultHref(
+  pathname: string,
+  siteUrl: string,
+  options: Partial<I18nPluginOptions>,
+): string {
   const supportedLangs = resolveSupportedLanguages(options);
   const defaultLang = resolveDefaultLanguage(options, supportedLangs);
   const localizedPath = getLocalizedPath(pathname, defaultLang, options);

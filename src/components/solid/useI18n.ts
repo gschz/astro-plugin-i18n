@@ -1,7 +1,7 @@
-import { createSignal, onMount, onCleanup } from 'solid-js';
+import { createSignal, onCleanup, onMount } from 'solid-js';
 import {
-  getCurrentLanguage,
   changeLanguage as coreChangeLanguage,
+  getCurrentLanguage,
   setupLanguageObserver,
 } from '~/core/language';
 import { t } from '~/core/translate';

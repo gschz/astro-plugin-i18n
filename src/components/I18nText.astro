@@ -15,11 +15,28 @@ interface Props {
   lang?: Language;
   values?: TranslationValues;
   class?: string;
-  element?: 'span' | 'div' | 'p' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'label';
+  element?:
+    | 'span'
+    | 'div'
+    | 'p'
+    | 'h1'
+    | 'h2'
+    | 'h3'
+    | 'h4'
+    | 'h5'
+    | 'h6'
+    | 'label';
   [key: string]: any;
 }
 
-const { key, lang, values, element: Element = 'span', class: className, ...rest } = Astro.props;
+const {
+  key,
+  lang,
+  values,
+  element: Element = 'span',
+  class: className,
+  ...rest
+} = Astro.props;
 
 // En SSR tomamos primero el idioma explícito; si no existe, usamos el idioma
 // resuelto por el middleware desde Astro.locals.

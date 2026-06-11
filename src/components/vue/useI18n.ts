@@ -1,7 +1,7 @@
-import { ref, onMounted, onUnmounted, type Ref } from 'vue';
+import { onMounted, onUnmounted, ref, type Ref } from 'vue';
 import {
-  getCurrentLanguage,
   changeLanguage as coreChangeLanguage,
+  getCurrentLanguage,
   setupLanguageObserver,
 } from '~/core/language';
 import { t } from '~/core/translate';

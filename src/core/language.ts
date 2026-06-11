@@ -70,7 +70,8 @@ function getClientLanguage(
   }
 
   if (typeof localStorage !== 'undefined') {
-    const storedLang = localStorage.getItem('language') || localStorage.getItem('lang');
+    const storedLang =
+      localStorage.getItem('language') || localStorage.getItem('lang');
     if (storedLang) {
       return storedLang;
     }
@@ -117,7 +118,8 @@ export function getCurrentLanguage(locals?: Record<string, any>): Language {
     return clientLang;
   }
 
-  const defaultLang = localsConfig?.defaultLang || globalConfig.defaultLang || 'es';
+  const defaultLang =
+    localsConfig?.defaultLang || globalConfig.defaultLang || 'es';
 
   if (!globalConfig.defaultLang && !localsConfig?.defaultLang) {
     console.debug('[i18n] Usando idioma por defecto:', defaultLang);
@@ -164,7 +166,11 @@ export function syncLanguageRoute(lang: Language): void {
     return;
   }
 
-  globalThis.window.history.pushState({ i18n: { lang } }, '', nextUrl.toString());
+  globalThis.window.history.pushState(
+    { i18n: { lang } },
+    '',
+    nextUrl.toString(),
+  );
 }
 
 /**
@@ -193,7 +199,10 @@ export async function changeLanguage(
   applyLanguageChange(lang, options);
 }
 
-function applyLanguageChange(lang: Language, options: ChangeLanguageOptions): void {
+function applyLanguageChange(
+  lang: Language,
+  options: ChangeLanguageOptions,
+): void {
   document.documentElement.setAttribute('lang', lang);
 
   if (typeof localStorage !== 'undefined') {
@@ -287,7 +296,9 @@ export async function setupLanguage(): Promise<void> {
   const config = getConfig();
 
   const configuredSupportedLangs =
-    config.supportedLangs && config.supportedLangs.length > 0 ? config.supportedLangs : [];
+    config.supportedLangs && config.supportedLangs.length > 0
+      ? config.supportedLangs
+      : [];
 
   const supportedLangs = configuredSupportedLangs;
 
@@ -303,7 +314,8 @@ export async function setupLanguage(): Promise<void> {
     !!storedLang,
   );
 
-  const language = initialLang || storedLang || browserLang || fallbackDefaultLang;
+  const language =
+    initialLang || storedLang || browserLang || fallbackDefaultLang;
 
   await changeLanguage(language, { syncRoute: false });
 }
@@ -342,7 +354,10 @@ export function bootstrapClientI18n(): void {
         config.supportedLangs && config.supportedLangs.length > 0
           ? config.supportedLangs
           : [config.defaultLang || 'en'];
-      const pathLang = getPathLanguage(globalThis.window.location.pathname, supportedLangs);
+      const pathLang = getPathLanguage(
+        globalThis.window.location.pathname,
+        supportedLangs,
+      );
 
       if (pathLang) {
         void changeLanguage(pathLang, { syncRoute: false });
@@ -369,7 +384,9 @@ export function bootstrapClientI18n(): void {
  * @returns Función de limpieza que elimina el listener al invocarse.
  *          En SSR devuelve una función vacía (no-op).
  */
-export function setupLanguageObserver(callback: (lang: Language) => void): () => void {
+export function setupLanguageObserver(
+  callback: (lang: Language) => void,
+): () => void {
   if (typeof document === 'undefined') {
     return () => {
       /* empty */

@@ -6,10 +6,18 @@
  * con {@link populateClientCache} antes de que los componentes rendericen.
  */
 
-import type { Language, TranslationKey, TranslationOptions, TranslationValues } from '../types';
+import type {
+  Language,
+  TranslationKey,
+  TranslationOptions,
+  TranslationValues,
+} from '../types';
 import { getConfig } from './config';
 import { getCurrentLanguage } from './language';
-import { applyVariables, resolvePluralKeyFromValues } from './translate-helpers';
+import {
+  applyVariables,
+  resolvePluralKeyFromValues,
+} from './translate-helpers';
 
 type RuntimeGlobal = typeof globalThis & {
   __ASTRO_I18N_CLIENT_TRANSLATIONS_CACHE__?: Record<string, string>;
@@ -44,19 +52,28 @@ const clientTranslationsCache: Record<string, string> =
  * // → clientTranslationsCache["es:home.title"] = "Inicio"
  * ```
  */
-export function populateClientCache(lang: Language, translations: Record<string, any>) {
+export function populateClientCache(
+  lang: Language,
+  translations: Record<string, any>,
+) {
   /**
    * Recurre sobre el objeto anidado y produce un mapa plano de claves en
    * notación de puntos. El prefijo acumula la ruta de niveles anteriores.
    */
-  const flattenTranslations = (obj: Record<string, any>, prefix = ''): Record<string, string> => {
+  const flattenTranslations = (
+    obj: Record<string, any>,
+    prefix = '',
+  ): Record<string, string> => {
     return Object.keys(obj).reduce(
       (acc, key) => {
         const currentPrefix = prefix.length ? `${prefix}.` : '';
 
         if (typeof obj[key] === 'object' && obj[key] !== null) {
           // Nodo intermedio: seguimos bajando recursivamente.
-          Object.assign(acc, flattenTranslations(obj[key], `${currentPrefix}${key}`));
+          Object.assign(
+            acc,
+            flattenTranslations(obj[key], `${currentPrefix}${key}`),
+          );
         } else {
           // Nodo hoja: guardamos la cadena con la clave completa.
           acc[`${currentPrefix}${key}`] = String(obj[key]);
@@ -76,14 +93,18 @@ export function populateClientCache(lang: Language, translations: Record<string,
   if (useNamespaces) {
     const entries = Object.entries(translations || {});
     const looksNamespaced =
-      entries.length > 0 && entries.every(([, value]) => typeof value === 'object' && value !== null);
+      entries.length > 0 &&
+      entries.every(([, value]) => typeof value === 'object' && value !== null);
 
     if (looksNamespaced) {
       for (const [namespace, namespaceTranslations] of entries) {
-        const flatTranslations = flattenTranslations(namespaceTranslations as Record<string, any>);
+        const flatTranslations = flattenTranslations(
+          namespaceTranslations as Record<string, any>,
+        );
 
         for (const key in flatTranslations) {
-          clientTranslationsCache[`${lang}:${namespace}${separator}${key}`] = flatTranslations[key];
+          clientTranslationsCache[`${lang}:${namespace}${separator}${key}`] =
+            flatTranslations[key];
         }
       }
 
@@ -120,7 +141,12 @@ export function t(key: TranslationKey, options?: TranslationOptions): string {
   const lang = options?.lang || getCurrentLanguage();
   const rawKey = String(key);
   const normalizedKey = normalizeTranslationKey(rawKey, config);
-  const pluralKey = resolvePluralKeyFromValues(normalizedKey, lang, options?.values, config);
+  const pluralKey = resolvePluralKeyFromValues(
+    normalizedKey,
+    lang,
+    options?.values,
+    config,
+  );
 
   const resolved = resolveTranslation(normalizedKey, pluralKey, lang, config);
 
@@ -128,7 +154,13 @@ export function t(key: TranslationKey, options?: TranslationOptions): string {
     return applyIfValues(resolved, options?.values);
   }
 
-  return applyMissingKeyStrategy(rawKey, key, lang, options?.values, config.missingKeyStrategy);
+  return applyMissingKeyStrategy(
+    rawKey,
+    key,
+    lang,
+    options?.values,
+    config.missingKeyStrategy,
+  );
 }
 
 /**
@@ -139,12 +171,20 @@ export function t(key: TranslationKey, options?: TranslationOptions): string {
  * @param options - Opciones de interpolación e idioma.
  * @returns `true` si la traducción existe en caché, `false` de lo contrario.
  */
-export function hasTranslation(key: TranslationKey, options?: TranslationOptions): boolean {
+export function hasTranslation(
+  key: TranslationKey,
+  options?: TranslationOptions,
+): boolean {
   const config = getConfig();
   const lang = options?.lang || getCurrentLanguage();
   const rawKey = String(key);
   const normalizedKey = normalizeTranslationKey(rawKey, config);
-  const pluralKey = resolvePluralKeyFromValues(normalizedKey, lang, options?.values, config);
+  const pluralKey = resolvePluralKeyFromValues(
+    normalizedKey,
+    lang,
+    options?.values,
+    config,
+  );
 
   return resolveTranslation(normalizedKey, pluralKey, lang, config) !== null;
 }
@@ -172,17 +212,30 @@ function resolveTranslation(
   const visited = new Set([lang]);
 
   if (pluralKey) {
-    const fromPluralFallback = resolveFallbackTranslation(pluralKey, lang, config.fallback, visited);
+    const fromPluralFallback = resolveFallbackTranslation(
+      pluralKey,
+      lang,
+      config.fallback,
+      visited,
+    );
     if (fromPluralFallback !== null) return fromPluralFallback;
   }
 
-  return resolveFallbackTranslation(normalizedKey, lang, config.fallback, visited);
+  return resolveFallbackTranslation(
+    normalizedKey,
+    lang,
+    config.fallback,
+    visited,
+  );
 }
 
 /**
  * Aplica `applyVariables` solo si `values` está definido.
  */
-function applyIfValues(text: string, values: TranslationValues | undefined): string {
+function applyIfValues(
+  text: string,
+  values: TranslationValues | undefined,
+): string {
   return values ? applyVariables(text, values) : text;
 }
 
@@ -199,7 +252,9 @@ function applyMissingKeyStrategy(
   if (strategy === 'empty') return '';
 
   if (strategy === 'error') {
-    console.error(`[i18n] Clave de traducción faltante (cliente): "${originalKey}" en idioma "${lang}"`);
+    console.error(
+      `[i18n] Clave de traducción faltante (cliente): "${originalKey}" en idioma "${lang}"`,
+    );
     return `[MISSING: ${originalKey}]`;
   }
 
@@ -214,7 +269,10 @@ function applyMissingKeyStrategy(
  * @param config - Configuracion i18n normalizada.
  * @returns Clave lista para busqueda en cache.
  */
-function normalizeTranslationKey(rawKey: string, config: ReturnType<typeof getConfig>): string {
+function normalizeTranslationKey(
+  rawKey: string,
+  config: ReturnType<typeof getConfig>,
+): string {
   const namespaceConfig = config.namespaces;
 
   if (!namespaceConfig?.enabled) {
@@ -255,5 +313,10 @@ function resolveFallbackTranslation(
 
   const nextVisited = new Set(visited);
   nextVisited.add(fallbackLang);
-  return resolveFallbackTranslation(key, fallbackLang, fallbackMap, nextVisited);
+  return resolveFallbackTranslation(
+    key,
+    fallbackLang,
+    fallbackMap,
+    nextVisited,
+  );
 }

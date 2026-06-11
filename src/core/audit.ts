@@ -8,9 +8,9 @@
  */
 
 import type { I18nPluginOptions, Language } from '../types';
-import { loadTranslations } from './translations';
 import { getConfig } from './config';
-import { resolveSupportedLanguages, resolveDefaultLanguage } from './routing';
+import { resolveDefaultLanguage, resolveSupportedLanguages } from './routing';
+import { loadTranslations } from './translations';
 
 export interface TranslationCoverageResult {
   /** Idioma por defecto analizado como base. */

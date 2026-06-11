@@ -9,9 +9,9 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import type { TranslationConfig } from '../types';
 import { getConfig, getDefaultLanguage } from '../core/config';
 import { loadTranslations } from '../core/translations';
+import type { TranslationConfig } from '../types';
 
 /**
  * Genera un archivo `.d.ts` con tipos derivados del idioma por defecto.
@@ -30,9 +30,16 @@ export async function generateTranslationTypes(): Promise<string> {
     return '';
   }
 
-  const typeDefinitionCode = generateTypeDefinitionCode(translations, config.supportedLangs || [], config);
+  const typeDefinitionCode = generateTypeDefinitionCode(
+    translations,
+    config.supportedLangs || [],
+    config,
+  );
 
-  const outputPath = path.resolve(process.cwd(), config.typesOutputPath || './src/types/i18n-types.d.ts');
+  const outputPath = path.resolve(
+    process.cwd(),
+    config.typesOutputPath || './src/types/i18n-types.d.ts',
+  );
   const dirPath = path.dirname(outputPath);
 
   try {
@@ -43,11 +50,17 @@ export async function generateTranslationTypes(): Promise<string> {
     fs.writeFileSync(outputPath, typeDefinitionCode, 'utf-8');
     return outputPath;
   } catch (error) {
-    console.error(`[i18n-types] Failed to write types file to ${outputPath}:`, error);
+    console.error(
+      `[i18n-types] Failed to write types file to ${outputPath}:`,
+      error,
+    );
 
-    throw new Error(`Failed to write i18n types file: ${error instanceof Error ? error.message : String(error)}`, {
-      cause: error,
-    });
+    throw new Error(
+      `Failed to write i18n types file: ${error instanceof Error ? error.message : String(error)}`,
+      {
+        cause: error,
+      },
+    );
   }
 }
 
@@ -77,7 +90,11 @@ function generateTypeDefinitionCode(
 `;
 
   const langType =
-    supportedLangs.length > 0 ? supportedLangs.map((lang) => `'${escapeTsStringLiteral(lang)}'`).join(' | ') : 'string';
+    supportedLangs.length > 0
+      ? supportedLangs
+          .map((lang) => `'${escapeTsStringLiteral(lang)}'`)
+          .join(' | ')
+      : 'string';
 
   code += `export type Lang = ${langType};
 export type GeneratedLanguage = Lang;
@@ -127,7 +144,12 @@ export type TFunction = (key: I18nKey, options?: I18nOptions) => string;
 export const I18N_KEYS = {
 `;
 
-  code += keys.map((key) => `  '${escapeTsStringLiteral(key)}': '${escapeTsStringLiteral(key)}',`).join('\n');
+  code += keys
+    .map(
+      (key) =>
+        `  '${escapeTsStringLiteral(key)}': '${escapeTsStringLiteral(key)}',`,
+    )
+    .join('\n');
 
   if (code.endsWith(',')) {
     code = code.slice(0, -1);
@@ -172,7 +194,10 @@ function escapeTsStringLiteral(value: string): string {
  * @param config - Configuracion i18n normalizada.
  * @returns Lista de claves a exportar.
  */
-function collectTranslationKeys(translations: Record<string, any>, config: TranslationConfig): string[] {
+function collectTranslationKeys(
+  translations: Record<string, any>,
+  config: TranslationConfig,
+): string[] {
   const keys = new Set<string>();
   const useNamespaces = config.namespaces?.enabled === true;
   const pluralizationEnabled = config.pluralization?.enabled !== false;
@@ -208,16 +233,29 @@ function collectNamespacedKeys(
   const separator = namespaceConfig?.separator ?? ':';
   const defaultNamespace = namespaceConfig?.defaultNamespace ?? 'common';
 
-  for (const [namespace, namespaceTranslations] of Object.entries(translations)) {
-    if (typeof namespaceTranslations !== 'object' || namespaceTranslations === null) {
+  for (const [namespace, namespaceTranslations] of Object.entries(
+    translations,
+  )) {
+    if (
+      typeof namespaceTranslations !== 'object' ||
+      namespaceTranslations === null
+    ) {
       continue;
     }
 
     const namespaceKeys: string[] = [];
-    extractKeysRecursive(namespaceTranslations as Record<string, any>, '', namespaceKeys);
+    extractKeysRecursive(
+      namespaceTranslations as Record<string, any>,
+      '',
+      namespaceKeys,
+    );
 
     for (const key of namespaceKeys) {
-      addKeyWithPluralSupport(keys, `${namespace}${separator}${key}`, pluralizationEnabled);
+      addKeyWithPluralSupport(
+        keys,
+        `${namespace}${separator}${key}`,
+        pluralizationEnabled,
+      );
 
       if (namespace === defaultNamespace) {
         addKeyWithPluralSupport(keys, key, pluralizationEnabled);
@@ -234,7 +272,10 @@ function collectNamespacedKeys(
  */
 function isNamespacedBundle(translations: Record<string, any>): boolean {
   const values = Object.values(translations || {});
-  return values.length > 0 && values.every((value) => typeof value === 'object' && value !== null);
+  return (
+    values.length > 0 &&
+    values.every((value) => typeof value === 'object' && value !== null)
+  );
 }
 
 /**
@@ -244,7 +285,11 @@ function isNamespacedBundle(translations: Record<string, any>): boolean {
  * @param key - Clave candidata.
  * @param pluralizationEnabled - Si pluralizacion esta activa.
  */
-function addKeyWithPluralSupport(keys: Set<string>, key: string, pluralizationEnabled: boolean): void {
+function addKeyWithPluralSupport(
+  keys: Set<string>,
+  key: string,
+  pluralizationEnabled: boolean,
+): void {
   keys.add(key);
 
   if (!pluralizationEnabled) {
@@ -274,7 +319,11 @@ function stripPluralSuffix(key: string): string {
  * @param prefix - Prefijo acumulado.
  * @param keys - Array de salida.
  */
-function extractKeysRecursive(obj: Record<string, any>, prefix: string, keys: string[]): void {
+function extractKeysRecursive(
+  obj: Record<string, any>,
+  prefix: string,
+  keys: string[],
+): void {
   for (const key in obj) {
     const fullKey = prefix ? `${prefix}.${key}` : key;
 

@@ -54,16 +54,19 @@ interface TranslationWatcher {
   add: (path: string) => void;
   on: (event: string, listener: (filePath: string) => void) => void;
   off?: (event: string, listener: (filePath: string) => void) => void;
-  removeListener?: (event: string, listener: (filePath: string) => void) => void;
+  removeListener?: (
+    event: string,
+    listener: (filePath: string) => void,
+  ) => void;
   setMaxListeners?: (n: number) => void;
   getMaxListeners?: () => number;
-};
+}
 
-type TranslationWatcherState = {
+interface TranslationWatcherState {
   dir?: string;
   handler?: (filePath: string) => void;
   watcher?: TranslationWatcher;
-};
+}
 
 /**
  * Logger del hook `astro:build:done` de Astro.
@@ -132,7 +135,9 @@ export function createI18nIntegration(
         if (typeof globalThis !== 'undefined') {
           try {
             globalThis.__ASTRO_I18N_OPTIONS__ = options;
-            logger.debug('Config options stored in global object for middleware');
+            logger.debug(
+              'Config options stored in global object for middleware',
+            );
           } catch {
             logger.warn('Failed to store config in global object');
           }
@@ -207,12 +212,17 @@ export function createI18nIntegration(
 
         if (!watcherState.handler) {
           const handleTranslationChange = (filePath: string) => {
-            if (filePath.startsWith(translationsDir) && filePath.endsWith('.json')) {
+            if (
+              filePath.startsWith(translationsDir) &&
+              filePath.endsWith('.json')
+            ) {
               clearTranslationsCache();
               debugLog(
                 `[integration] translations cache invalidated (${path.relative(process.cwd(), filePath)} changed)`,
               );
-              logger.info(`i18n: translations reloaded (${path.relative(process.cwd(), filePath)})`);
+              logger.info(
+                `i18n: translations reloaded (${path.relative(process.cwd(), filePath)})`,
+              );
             }
           };
 
@@ -227,7 +237,9 @@ export function createI18nIntegration(
 
         const lazyLoading = config.lazyLoading;
         if (lazyLoading?.enabled) {
-          const publicBase = normalizePublicPath(lazyLoading.publicPath ?? '/i18n');
+          const publicBase = normalizePublicPath(
+            lazyLoading.publicPath ?? '/i18n',
+          );
 
           server.middlewares.use(async (req, res, next) => {
             if (!req.url) {
@@ -235,13 +247,21 @@ export function createI18nIntegration(
             }
 
             const url = new URL(req.url, 'http://localhost');
-            if (!url.pathname.startsWith(`${publicBase}/`) || !url.pathname.endsWith('.json')) {
+            if (
+              !url.pathname.startsWith(`${publicBase}/`) ||
+              !url.pathname.endsWith('.json')
+            ) {
               return next();
             }
 
-            const requestedLang = url.pathname.slice(publicBase.length + 1).replace(/\.json$/, '');
+            const requestedLang = url.pathname
+              .slice(publicBase.length + 1)
+              .replace(/\.json$/, '');
             const supportedLangs = config.supportedLangs ?? [];
-            const resolvedLang = matchSupportedLanguage(requestedLang, supportedLangs);
+            const resolvedLang = matchSupportedLanguage(
+              requestedLang,
+              supportedLangs,
+            );
 
             if (!resolvedLang) {
               res.statusCode = 404;
@@ -258,7 +278,9 @@ export function createI18nIntegration(
               res.setHeader('Cache-Control', 'no-store');
               res.end(body);
             } catch (error) {
-              logger.warn(`i18n: failed to serve bundle for "${resolvedLang}": ${error}`);
+              logger.warn(
+                `i18n: failed to serve bundle for "${resolvedLang}": ${error}`,
+              );
               res.statusCode = 500;
               res.end('Failed to load translations');
             }
@@ -266,11 +288,15 @@ export function createI18nIntegration(
         }
       },
 
-      'astro:build:start': async ({ logger }: HookParameters<'astro:build:start'>) => {
+      'astro:build:start': async ({
+        logger,
+      }: HookParameters<'astro:build:start'>) => {
         logger.info(`Building with ${packageName}...`);
       },
 
-      'astro:build:done': async ({ logger }: HookParameters<'astro:build:done'>) => {
+      'astro:build:done': async ({
+        logger,
+      }: HookParameters<'astro:build:done'>) => {
         logger.info(`Build process contribution completed.`);
         await runAuditOnBuildIfEnabled(options, logger);
         await generateLazyBundlesIfEnabled(logger);
@@ -299,10 +325,16 @@ function validateOptions(
   };
 
   if (!options.defaultLang || typeof options.defaultLang !== 'string') {
-    logError("i18n config error: 'defaultLang' is required and must be a string in Astro integration options.");
+    logError(
+      "i18n config error: 'defaultLang' is required and must be a string in Astro integration options.",
+    );
   }
 
-  if (!options.supportedLangs || !Array.isArray(options.supportedLangs) || options.supportedLangs.length === 0) {
+  if (
+    !options.supportedLangs ||
+    !Array.isArray(options.supportedLangs) ||
+    options.supportedLangs.length === 0
+  ) {
     logError(
       "i18n config error: 'supportedLangs' is required and must be a non-empty array in Astro integration options.",
     );
@@ -325,7 +357,9 @@ function validateOptions(
  *
  * @param logger - Logger de Astro del hook `astro:config:setup`.
  */
-function logAppliedConfig(logger: HookParameters<'astro:config:setup'>['logger']): void {
+function logAppliedConfig(
+  logger: HookParameters<'astro:config:setup'>['logger'],
+): void {
   const currentConfig = getConfig();
 
   logger.info(
@@ -358,13 +392,17 @@ async function maybeGenerateTypes(
       if (typesPath) {
         logger.info(`Generated i18n translation types at: ${typesPath}`);
       } else {
-        logger.info('i18n type generation skipped (no translations found for default language).');
+        logger.info(
+          'i18n type generation skipped (no translations found for default language).',
+        );
       }
     } catch (error) {
       logger.error(`Failed to generate i18n translation types: ${error}`);
     }
   } else if (options.generateTypes) {
-    logger.info("Skipping i18n type generation (enabled but command is not 'build' or 'dev').");
+    logger.info(
+      "Skipping i18n type generation (enabled but command is not 'build' or 'dev').",
+    );
   }
 }
 
@@ -378,7 +416,10 @@ function getTranslationsWatcherState(): TranslationWatcherState {
   return runtimeGlobal.__ASTRO_I18N_TRANSLATIONS_WATCHER__;
 }
 
-function detachWatcherListener(watcher: TranslationWatcher, handler: (filePath: string) => void): void {
+function detachWatcherListener(
+  watcher: TranslationWatcher,
+  handler: (filePath: string) => void,
+): void {
   if (typeof watcher.off === 'function') {
     watcher.off('change', handler);
     return;
@@ -390,7 +431,10 @@ function detachWatcherListener(watcher: TranslationWatcher, handler: (filePath: 
 }
 
 function ensureWatcherMaxListeners(watcher: TranslationWatcher): void {
-  if (typeof watcher.setMaxListeners !== 'function' || typeof watcher.getMaxListeners !== 'function') {
+  if (
+    typeof watcher.setMaxListeners !== 'function' ||
+    typeof watcher.getMaxListeners !== 'function'
+  ) {
     return;
   }
 
@@ -466,9 +510,14 @@ function resolveLazyOutputDir(
   return path.join(baseDir, clientBase, normalizedPublic);
 }
 
-function logTranslationCoverageReport(logger: BuildDoneLogger, report: TranslationCoverageResult): void {
+function logTranslationCoverageReport(
+  logger: BuildDoneLogger,
+  report: TranslationCoverageResult,
+): void {
   if (report.isComplete) {
-    logger.info(`i18n coverage: all ${report.languages.length} languages have ${report.totalKeys} keys ✓`);
+    logger.info(
+      `i18n coverage: all ${report.languages.length} languages have ${report.totalKeys} keys ✓`,
+    );
     return;
   }
 
@@ -542,7 +591,10 @@ function normalizeBuildClientDir(value: unknown): string | undefined {
 /**
  * Si `auditOnBuild` está activo, ejecuta la auditoría de cobertura y registra el informe.
  */
-async function runAuditOnBuildIfEnabled(options: Partial<I18nPluginOptions>, logger: BuildDoneLogger): Promise<void> {
+async function runAuditOnBuildIfEnabled(
+  options: Partial<I18nPluginOptions>,
+  logger: BuildDoneLogger,
+): Promise<void> {
   if (!options.auditOnBuild) {
     return;
   }
@@ -558,7 +610,9 @@ async function runAuditOnBuildIfEnabled(options: Partial<I18nPluginOptions>, log
 /**
  * Tras el build, genera en disco los bundles por idioma si lazy loading está habilitado.
  */
-async function generateLazyBundlesIfEnabled(logger: BuildDoneLogger): Promise<void> {
+async function generateLazyBundlesIfEnabled(
+  logger: BuildDoneLogger,
+): Promise<void> {
   const config = getConfig();
   if (!config.lazyLoading?.enabled) {
     return;
@@ -571,7 +625,9 @@ async function generateLazyBundlesIfEnabled(logger: BuildDoneLogger): Promise<vo
       astroBuildClientDir,
     );
     await generateBundles(outputDir);
-    logger.info(`i18n: bundles generated at ${path.relative(process.cwd(), outputDir)}`);
+    logger.info(
+      `i18n: bundles generated at ${path.relative(process.cwd(), outputDir)}`,
+    );
   } catch (error) {
     logger.warn(
       `i18n: failed to generate bundles: ${error} (astroBuildClientDir=${typeof astroBuildClientDir} ${JSON.stringify(astroBuildClientDir)})`,

@@ -17,7 +17,9 @@ import { loadTranslations } from './translations';
  * - En modo legacy retorna el JSON de `{lang}.json`.
  * - En modo namespaces retorna `{ namespace: translations }`.
  */
-export async function bundleLanguageTranslations(lang: Language): Promise<Record<string, any>> {
+export async function bundleLanguageTranslations(
+  lang: Language,
+): Promise<Record<string, any>> {
   return loadTranslations(lang);
 }
 

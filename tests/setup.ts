@@ -11,7 +11,7 @@
 import { beforeEach } from 'vitest';
 
 function createLocalStorageMock(): Storage {
-  let store: Map<string, string> = new Map();
+  let store = new Map<string, string>();
 
   return {
     get length() {

@@ -1,5 +1,5 @@
-import { rm } from 'node:fs/promises';
 import fs from 'node:fs';
+import { rm } from 'node:fs/promises';
 
 if (!fs.existsSync('dist')) {
   console.log('[rm] dist not found, skipping removal');

@@ -1,1 +1,1 @@
-export { language, changeLanguage, t, translate } from './i18n';
+export { changeLanguage, language, t, translate } from './i18n';

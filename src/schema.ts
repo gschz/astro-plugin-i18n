@@ -14,7 +14,10 @@ import { z } from 'astro/zod';
 import type { I18nPluginOptions } from './types';
 
 export const i18nRoutingOptionsSchema = z.object({
-  strategy: z.enum(['manual', 'prefix', 'prefix-except-default']).optional().default('manual'),
+  strategy: z
+    .enum(['manual', 'prefix', 'prefix-except-default'])
+    .optional()
+    .default('manual'),
   prefixDefaultLocale: z.boolean().optional().default(false),
   redirectToDefaultLocale: z.boolean().optional().default(false),
 });
@@ -32,7 +35,10 @@ export const i18nPluralizationOptionsSchema = z.object({
 
 export const i18nLazyLoadingOptionsSchema = z.object({
   enabled: z.boolean().optional().default(false),
-  strategy: z.enum(['language', 'namespace', 'hybrid']).optional().default('language'),
+  strategy: z
+    .enum(['language', 'namespace', 'hybrid'])
+    .optional()
+    .default('language'),
   preloadNamespaces: z.array(z.string()).optional(),
   publicPath: z.string().optional().default('/i18n'),
 });
@@ -72,7 +78,10 @@ export const i18nPluginOptionsSchema = z.object({
    * - `"empty"`: devuelve cadena vacía.
    * - `"error"`: emite error en consola y devuelve `[MISSING: key]`.
    */
-  missingKeyStrategy: z.enum(['key', 'empty', 'error']).optional().default('key'),
+  missingKeyStrategy: z
+    .enum(['key', 'empty', 'error'])
+    .optional()
+    .default('key'),
   /** Configuración de namespaces (múltiples archivos JSON por idioma). */
   namespaces: i18nNamespacesOptionsSchema.optional(),
   /** Configuración de pluralización basada en `Intl.PluralRules`. */
