@@ -11,7 +11,7 @@ function clearClientCache(): void {
   const cache = runtimeGlobal.__ASTRO_I18N_CLIENT_TRANSLATIONS_CACHE__;
   if (!cache) return;
   for (const key of Object.keys(cache)) {
-    delete cache[key];
+    Reflect.deleteProperty(cache, key);
   }
 }
 
@@ -54,7 +54,7 @@ describe('useI18n (Solid)', () => {
   });
 
   it('debe retornar language (signal), changeLanguage y t', async () => {
-    const { useI18n } = await import('../../../src/components/solid/useI18n');
+    const { useI18n } = await import('~/components/solid/useI18n');
     const { language, changeLanguage, t } = useI18n();
 
     expect(typeof language).toBe('function');
@@ -63,7 +63,7 @@ describe('useI18n (Solid)', () => {
   });
 
   it('language() debe inicializarse con el idioma actual', async () => {
-    const { useI18n } = await import('../../../src/components/solid/useI18n');
+    const { useI18n } = await import('~/components/solid/useI18n');
     const { language } = useI18n();
 
     expect(language()).toBe('en');
@@ -73,14 +73,14 @@ describe('useI18n (Solid)', () => {
     populateClientCache('en', { greeting: 'Hello' });
     populateClientCache('es', { greeting: 'Hola' });
 
-    const { useI18n } = await import('../../../src/components/solid/useI18n');
+    const { useI18n } = await import('~/components/solid/useI18n');
     const { t } = useI18n();
 
     expect(t('greeting')).toBe('Hello');
   });
 
   it('t debe devolver la clave si la traducción no existe', async () => {
-    const { useI18n } = await import('../../../src/components/solid/useI18n');
+    const { useI18n } = await import('~/components/solid/useI18n');
     const { t } = useI18n();
 
     expect(t('missing.key')).toBe('missing.key');
@@ -89,14 +89,14 @@ describe('useI18n (Solid)', () => {
   it('t debe soportar interpolación de variables', async () => {
     populateClientCache('en', { greeting: 'Hello, {name}!' });
 
-    const { useI18n } = await import('../../../src/components/solid/useI18n');
+    const { useI18n } = await import('~/components/solid/useI18n');
     const { t } = useI18n();
 
     expect(t('greeting', { values: { name: 'World' } })).toBe('Hello, World!');
   });
 
   it('changeLanguage debe actualizar language()', async () => {
-    const { useI18n } = await import('../../../src/components/solid/useI18n');
+    const { useI18n } = await import('~/components/solid/useI18n');
     const { language, changeLanguage } = useI18n();
 
     await changeLanguage('es');
@@ -105,7 +105,7 @@ describe('useI18n (Solid)', () => {
   });
 
   it('el módulo solid/index exporta useI18n correctamente', async () => {
-    const solidModule = await import('../../../src/components/solid/index');
+    const solidModule = await import('~/components/solid/index');
 
     expect(typeof solidModule.useI18n).toBe('function');
   });

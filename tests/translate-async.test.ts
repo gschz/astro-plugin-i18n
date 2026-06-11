@@ -2,9 +2,9 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { initConfig, resetConfig } from '../src/core/config';
-import { clearTranslationsCache } from '../src/core/translations';
-import { translateAsync } from '../src/core/translate-async';
+import { initConfig, resetConfig } from '~/core/config';
+import { translateAsync } from '~/core/translate-async';
+import { clearTranslationsCache } from '~/core/translations';
 
 function createTempDir(): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'astro-i18n-plugin-tests-'));

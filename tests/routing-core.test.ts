@@ -5,7 +5,7 @@ import {
   normalizeRoutingOptions,
   resolveDefaultLanguage,
   resolveSupportedLanguages,
-} from '../src/core/routing';
+} from '~/core/routing';
 
 describe('routing core', () => {
   it('normaliza defaults de routing', () => {

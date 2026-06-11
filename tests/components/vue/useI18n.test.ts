@@ -11,7 +11,7 @@ function clearClientCache(): void {
   const cache = runtimeGlobal.__ASTRO_I18N_CLIENT_TRANSLATIONS_CACHE__;
   if (!cache) return;
   for (const key of Object.keys(cache)) {
-    delete cache[key];
+    Reflect.deleteProperty(cache, key);
   }
 }
 
@@ -42,7 +42,7 @@ describe('useI18n (Vue)', () => {
   });
 
   it('debe retornar language, changeLanguage y t', async () => {
-    const { useI18n } = await import('../../../src/components/vue/useI18n');
+    const { useI18n } = await import('~/components/vue/useI18n');
     const { language, changeLanguage, t } = useI18n();
 
     expect(language).toBeDefined();
@@ -52,7 +52,7 @@ describe('useI18n (Vue)', () => {
   });
 
   it('language.value debe inicializarse con el idioma actual', async () => {
-    const { useI18n } = await import('../../../src/components/vue/useI18n');
+    const { useI18n } = await import('~/components/vue/useI18n');
     const { language } = useI18n();
 
     expect(language.value).toBe('en');
@@ -62,14 +62,14 @@ describe('useI18n (Vue)', () => {
     populateClientCache('en', { greeting: 'Hello' });
     populateClientCache('es', { greeting: 'Hola' });
 
-    const { useI18n } = await import('../../../src/components/vue/useI18n');
+    const { useI18n } = await import('~/components/vue/useI18n');
     const { t } = useI18n();
 
     expect(t('greeting')).toBe('Hello');
   });
 
   it('t debe devolver la clave si la traducción no existe (missingKeyStrategy: key)', async () => {
-    const { useI18n } = await import('../../../src/components/vue/useI18n');
+    const { useI18n } = await import('~/components/vue/useI18n');
     const { t } = useI18n();
 
     expect(t('missing.key')).toBe('missing.key');
@@ -78,14 +78,14 @@ describe('useI18n (Vue)', () => {
   it('t debe soportar interpolación de variables', async () => {
     populateClientCache('en', { greeting: 'Hello, {name}!' });
 
-    const { useI18n } = await import('../../../src/components/vue/useI18n');
+    const { useI18n } = await import('~/components/vue/useI18n');
     const { t } = useI18n();
 
     expect(t('greeting', { values: { name: 'World' } })).toBe('Hello, World!');
   });
 
   it('changeLanguage debe actualizar language.value', async () => {
-    const { useI18n } = await import('../../../src/components/vue/useI18n');
+    const { useI18n } = await import('~/components/vue/useI18n');
     const { language, changeLanguage } = useI18n();
 
     await changeLanguage('es');
@@ -94,7 +94,7 @@ describe('useI18n (Vue)', () => {
   });
 
   it('el módulo vue/index exporta useI18n correctamente', async () => {
-    const vueModule = await import('../../../src/components/vue/index');
+    const vueModule = await import('~/components/vue/index');
 
     expect(typeof vueModule.useI18n).toBe('function');
   });

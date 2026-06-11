@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { initConfig, resetConfig } from '../src/core/config';
-import { getLanguageRedirect, isLanguageSupported } from '../src/core/setup';
+import { initConfig, resetConfig } from '~/core/config';
+import { getLanguageRedirect, isLanguageSupported } from '~/core/setup';
 
 describe('setup API helpers', () => {
   beforeEach(() => {

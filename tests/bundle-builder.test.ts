@@ -2,9 +2,12 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { initConfig, resetConfig } from '../src/core/config';
-import { bundleLanguageTranslations, generateBundles } from '../src/core/bundle-builder';
-import { clearTranslationsCache } from '../src/core/translations';
+import {
+  bundleLanguageTranslations,
+  generateBundles,
+} from '~/core/bundle-builder';
+import { initConfig, resetConfig } from '~/core/config';
+import { clearTranslationsCache } from '~/core/translations';
 
 async function writeJson(filePath: string, data: unknown): Promise<void> {
   await fs.mkdir(path.dirname(filePath), { recursive: true });

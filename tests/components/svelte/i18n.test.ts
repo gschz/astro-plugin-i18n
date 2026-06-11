@@ -11,7 +11,7 @@ function clearClientCache(): void {
   const cache = runtimeGlobal.__ASTRO_I18N_CLIENT_TRANSLATIONS_CACHE__;
   if (!cache) return;
   for (const key of Object.keys(cache)) {
-    delete cache[key];
+    Reflect.deleteProperty(cache, key);
   }
 }
 
@@ -91,7 +91,7 @@ describe('i18n store (Svelte)', () => {
 
   it('debe exportar language store, changeLanguage y t', async () => {
     const { language, changeLanguage, t } =
-      await import('../../../src/components/svelte/i18n');
+      await import('~/components/svelte/i18n');
 
     expect(language).toBeDefined();
     expect(language).toHaveProperty('subscribe');
@@ -100,7 +100,7 @@ describe('i18n store (Svelte)', () => {
   });
 
   it('language store debe inicializarse con el idioma actual', async () => {
-    const { language } = await import('../../../src/components/svelte/i18n');
+    const { language } = await import('~/components/svelte/i18n');
 
     let currentLang: string | undefined;
     const unsubscribe = language.subscribe((lang: string) => {
@@ -115,7 +115,7 @@ describe('i18n store (Svelte)', () => {
     populateClientCache('en', { greeting: 'Hello' });
     populateClientCache('es', { greeting: 'Hola' });
 
-    const { t } = await import('../../../src/components/svelte/i18n');
+    const { t } = await import('~/components/svelte/i18n');
     let $t: any;
     t.subscribe((v: any) => ($t = v))();
 
@@ -123,7 +123,7 @@ describe('i18n store (Svelte)', () => {
   });
 
   it('t debe devolver la clave si la traducción no existe', async () => {
-    const { t } = await import('../../../src/components/svelte/i18n');
+    const { t } = await import('~/components/svelte/i18n');
     let $t: any;
     t.subscribe((v: any) => ($t = v))();
 
@@ -133,7 +133,7 @@ describe('i18n store (Svelte)', () => {
   it('t debe soportar interpolación de variables', async () => {
     populateClientCache('en', { greeting: 'Hello, {name}!' });
 
-    const { t } = await import('../../../src/components/svelte/i18n');
+    const { t } = await import('~/components/svelte/i18n');
     let $t: any;
     t.subscribe((v: any) => ($t = v))();
 
@@ -141,13 +141,37 @@ describe('i18n store (Svelte)', () => {
   });
 
   it('translate se exporta como funcion', async () => {
-    const { translate } = await import('../../../src/components/svelte/i18n');
+    const { translate } = await import('~/components/svelte/i18n');
 
     expect(typeof translate).toBe('function');
   });
 
+  it('translate traduce usando el idioma activo', async () => {
+    populateClientCache('en', { greeting: 'Hello' });
+
+    const { translate } = await import('~/components/svelte/i18n');
+
+    expect(translate('greeting')).toBe('Hello');
+  });
+
+  it('translate soporta interpolacion de valores', async () => {
+    populateClientCache('en', { greeting: 'Hello, {name}!' });
+
+    const { translate } = await import('~/components/svelte/i18n');
+
+    expect(translate('greeting', { values: { name: 'World' } })).toBe(
+      'Hello, World!',
+    );
+  });
+
+  it('translate devuelve la key si no existe traduccion', async () => {
+    const { translate } = await import('~/components/svelte/i18n');
+
+    expect(translate('missing.key')).toBe('missing.key');
+  });
+
   it('el módulo svelte/index exporta todos los símbolos correctamente', async () => {
-    const svelteModule = await import('../../../src/components/svelte/index');
+    const svelteModule = await import('~/components/svelte/index');
 
     expect(svelteModule).toHaveProperty('language');
     expect(svelteModule).toHaveProperty('changeLanguage');
