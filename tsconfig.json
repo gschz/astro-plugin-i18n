@@ -4,16 +4,30 @@
     "jsx": "react-jsx",
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "target": "ES2022",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "target": "ESNext",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "types": ["node"],
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
+    "noEmit": true,
+    "verbatimModuleSyntax": true,
+    "strict": true,
     "isolatedModules": true,
-    "noEmit": true
+    "paths": {
+      "~/*": ["./src/*"]
+    }
   },
-  "include": ["src", "scripts", "tests", "*.ts", "*.tsx", "*.mts", "*.cts", "tsdown.config"],
+  "include": [
+    "src",
+    "scripts",
+    "tests",
+    "*.ts",
+    "*.tsx",
+    "*.mts",
+    "*.cts",
+    "tsdown.config.ts"
+  ],
   "exclude": ["dist", "node_modules"]
 }

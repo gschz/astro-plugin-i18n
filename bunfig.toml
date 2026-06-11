@@ -1,0 +1,4 @@
+[install]
+ignoreScripts = true
+linker = "isolated"
+exact = true
