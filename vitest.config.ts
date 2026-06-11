@@ -7,6 +7,18 @@ export default defineConfig({
     clearMocks: true,
     restoreMocks: true,
     setupFiles: ['./tests/setup.ts'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      exclude: [
+        'node_modules/',
+        'dist/',
+        'tests/',
+        '**/*.test.ts',
+        '**/*.d.ts',
+      ],
+    },
+  },
   resolve: {
     alias: {
       '~/': new URL('./src/', import.meta.url).pathname,
