@@ -1,6 +1,6 @@
 # Referencia de API
 
-Referencia técnica de **`@gschz/astro-plugin-i18n` v1.3.11**.
+Referencia técnica de **`@gschz/astro-plugin-i18n` v1.4.10-rc.1**.
 
 <p align="center">
   Idioma: <strong>ES</strong> | <a href="API.en.md">EN</a>
@@ -82,7 +82,9 @@ export default defineConfig({
 ### 2.2 Firma
 
 ```ts
-function createI18nIntegration(options?: Partial<I18nPluginOptions>): AstroIntegration;
+function createI18nIntegration(
+  options?: Partial<I18nPluginOptions>,
+): AstroIntegration;
 ```
 
 La exportación por defecto de `@gschz/astro-plugin-i18n/integration` es la misma factoría.
@@ -99,12 +101,12 @@ Si falla, lanza `Error` antes de que el servidor de desarrollo acepte peticiones
 
 ### 2.4 Hooks del ciclo de vida
 
-| Hook                 | Comportamiento                                                                                                                         |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `astro:config:setup` | Normaliza la configuración, guarda opciones en `global.__ASTRO_I18N_OPTIONS__`, registra middleware `pre`, genera tipos opcionalmente. |
-| `astro:server:setup` | Resincroniza opciones del middleware; vigila JSON de traducciones para HMR (invalida caché del servidor).                              |
-| `astro:build:start`  | Registro de compilación.                                                                                                               |
-| `astro:build:done`   | `auditOnBuild` opcional; escribe bundles de carga diferida en `public` cuando `lazyLoading.enabled`.                                   |
+| Hook                 | Comportamiento                                                                                                                                                                                      |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `astro:config:setup` | Normaliza la configuración, guarda opciones en `global.__ASTRO_I18N_OPTIONS__`, registra middleware `pre`, registra virtual module Vite, genera tipos opcionalmente.                                |
+| `astro:server:setup` | Resincroniza opciones del middleware; vigila JSON de traducciones para HMR (invalida caché del servidor).                                                                                           |
+| `astro:build:start`  | Registro de compilación.                                                                                                                                                                            |
+| `astro:build:done`   | `auditOnBuild` opcional; escribe bundles de carga diferida en `<build.client>/<publicPath>` cuando `lazyLoading.enabled` (corregido en PR [#4](https://github.com/gschz/astro-plugin-i18n/pull/4)). |
 
 ### 2.5 `astro add`
 
@@ -307,8 +309,8 @@ Funciona en cachés de servidor (`translateAsync`, `getTranslation`) y cliente (
 Cuando `lazyLoading.enabled` es `true`:
 
 1. **SSR** — `getI18nClientBootstrapPayload()` devuelve solo el idioma actual (y `preloadNamespaces` opcional); `allTranslations` es `{}`.
-2. **Build** — JSON fusionado por idioma se escribe bajo `public<i18n/publicPath>/`.
-3. **Cliente** — `changeLanguage(lang)` obtiene `/{publicPath}/{lang}.json` si ese idioma no está en caché, luego actualiza la UI.
+2. **Build** — JSON fusionado por idioma se escribe bajo `<build.client>/<publicPath>/` para que los adapters serverless lo sirvan como estático (corregido en PR [#4](https://github.com/gschz/astro-plugin-i18n/pull/4)).
+3. **Cliente** — Las traducciones se entregan via virtual module Vite (`virtual:@gschz/astro-plugin-i18n/internal`). `bootstrapClientI18n()` las lee desde el import estático, no via fetch ni `__INITIAL_I18N_ALL_TRANSLATIONS__`.
 
 Ejemplo:
 
@@ -439,7 +441,9 @@ Resolvedor asíncrono solo en servidor (lee sistema de archivos / caché del ser
 
 ```astro
 ---
-const title = await translateAsync('home:title', { lang: getCurrentLanguage(Astro.locals) });
+const title = await translateAsync('home:title', {
+  lang: getCurrentLanguage(Astro.locals),
+});
 ---
 ```
 
@@ -551,7 +555,8 @@ Solo en el punto de entrada del cliente.
 Escanea `data-i18n-key` (predeterminado) y asigna `textContent` mediante `t()`.
 
 ```html
-<span data-i18n-key="nav.home"></span> <span data-i18n-key="greeting" data-i18n-values='{"name":"Ana"}'></span>
+<span data-i18n-key="nav.home"></span>
+<span data-i18n-key="greeting" data-i18n-values='{"name":"Ana"}'></span>
 ```
 
 Opciones: `root`, `keyAttribute`, `valuesAttribute`, `allowedKeys`.
@@ -596,7 +601,11 @@ Añade `data-i18n-key` y `data-i18n-values` opcional para re-render en cliente.
 import I18nHead from '@gschz/astro-plugin-i18n/components/I18nHead.astro';
 ---
 
-<I18nHead currentLang={lang} currentPath={Astro.url.pathname} siteUrl="https://example.com" />
+<I18nHead
+  currentLang={lang}
+  currentPath={Astro.url.pathname}
+  siteUrl="https://example.com"
+/>
 ```
 
 | Prop              | Tipo                     | Predeterminado              | Descripción                             |
@@ -740,9 +749,9 @@ window.__INITIAL_I18N_STATE__ = {
   translations?: Record<string, any>;
   config?: Partial<I18nPluginOptions>;
 };
-
-window.__INITIAL_I18N_ALL_TRANSLATIONS__?: Record<string, Record<string, any>>;
 ```
+
+> **Nota:** `__INITIAL_I18N_ALL_TRANSLATIONS__` ya no es necesario desde v1.4.9+. Las traducciones se entregan al cliente via el virtual module Vite (`virtual:@gschz/astro-plugin-i18n/internal`), importado estáticamente por `client.ts`.
 
 ### Eventos (`document`)
 
@@ -769,9 +778,9 @@ Asegúrate de que `typesOutputPath` esté en el array `include` de tu `tsconfig.
 
 1. Configura `i18n()` en `astro.config.*`.
 2. Estructura páginas según tu `routing.strategy` (p. ej. `src/pages/[lang]/…`).
-3. En el layout raíz: `getI18nClientBootstrapPayload(Astro.locals)` + script inline + `bootstrapClientI18n()`.
+3. En el layout raíz: `getI18nClientBootstrapPayload(Astro.locals)` + script inline (solo `__INITIAL_I18N_STATE__`, sin `__INITIAL_I18N_ALL_TRANSLATIONS__`) + `bootstrapClientI18n()`.
 4. Añade `<I18nHead />` para SEO.
-5. Traduce contenido con `I18nText.astro`, `translateAsync` o componentes React.
+5. Traduce contenido con `I18nText.astro`, `translateAsync` o componentes React/Vue/Svelte/Solid.
 6. Opcional: `bindDataI18n()` para markup estático con `data-i18n-*`.
 7. Activa `auditOnBuild` en CI para detectar claves faltantes.
 
@@ -797,7 +806,7 @@ Configura `routing` y no llames a `changeLanguage` con `{ syncRoute: false }` sa
 ### Carga diferida: traducciones vacías tras el cambio
 
 1. `lazyLoading.enabled` es `true`.
-2. `astro build` generó archivos bajo `publicPath` (p. ej. `public/i18n/en.json`).
+2. `astro build` generó archivos bajo `<build.client>/<publicPath>` (p. ej. `dist/client/i18n/en.json`).
 3. En dev, el middleware de desarrollo de la integración está activo (predeterminado con la integración).
 
 ### Los tipos no se actualizan

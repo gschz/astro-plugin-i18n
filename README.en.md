@@ -23,7 +23,7 @@ Internationalization (i18n) plugin for Astro — SSR-first, reactive client upda
 - **Interpolation** — `{variable}` placeholders in translation strings.
 - **Pluralization** — CLDR categories via `Intl.PluralRules` (`count_zero`, `count_one`, `count_other`, …).
 - **Language fallback chain** — missing keys resolved in a configured fallback language before `missingKeyStrategy`.
-- **Lazy loading** — smaller SSR payload; per-language bundles fetched on `changeLanguage()`.
+- **Lazy loading** — smaller SSR payload; per-language bundles served as static files (fixed in PR [#4](https://github.com/gschz/astro-plugin-i18n/pull/4) for serverless adapters).
 - **SEO** — `I18nHead.astro` generates `hreflang`, `x-default`, and Open Graph locale tags.
 - **Multi-framework** — Native hooks and stores for React (`/react`), Vue (`/vue`), Svelte (`/svelte`), and Solid (`/solid`).
 - **Declarative DOM** — `data-i18n-*` attributes with `bindDataI18n` / `renderDataI18n`.
@@ -118,7 +118,6 @@ const i18nBootstrap = await getI18nClientBootstrapPayload(Astro.locals);
         translations: i18nBootstrap.translations,
         config: i18nBootstrap.config,
       };
-      window.__INITIAL_I18N_ALL_TRANSLATIONS__ = i18nBootstrap.allTranslations;
     </script>
   </head>
   <body>
@@ -131,7 +130,7 @@ const i18nBootstrap = await getI18nClientBootstrapPayload(Astro.locals);
 </html>
 ```
 
-With `lazyLoading.enabled`, `allTranslations` is empty on purpose; the client fetches bundles when switching languages.
+> **Note:** When `lazyLoading.enabled`, `allTranslations` is empty in the SSR payload; translations are delivered to the client via a Vite virtual module (`virtual:@gschz/astro-plugin-i18n/internal`) — no fetch, no massive JSON inline in the HTML. Implemented in PR [#4](https://github.com/gschz/astro-plugin-i18n/pull/4).
 
 ### 4. Use translations
 
@@ -217,9 +216,9 @@ i18n({
 });
 ```
 
-## Official demo (still in progress)
+## Demo
 
-The [`demo/`](demo/) app is a full example (es, en, pt-BR) with routing, namespaces, pluralization, lazy loading, `I18nHead`, and React islands. See [demo/README.md](demo/README.md).
+The [`pkg/demo/`](pkg/demo/) app is a full example (es, en, pt-BR) with routing, namespaces, pluralization, lazy loading (serverless-fixed), Vite virtual module, multi-framework (React, Vue, Svelte, Solid), and full SEO. Deployed on Vercel. See [pkg/demo/README.md](pkg/demo/README.md).
 
 ```bash
 cd demo && bun install && bun dev

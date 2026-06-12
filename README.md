@@ -23,7 +23,7 @@ Plugin de internacionalizacion (i18n) para Astro: SSR-first, actualizacion react
 - **Interpolacion** — placeholders `{variable}` en las cadenas.
 - **Pluralizacion** — categorias CLDR con `Intl.PluralRules` (`count_zero`, `count_one`, `count_other`, …).
 - **Cadena de fallback** — claves faltantes se buscan en otro idioma antes de `missingKeyStrategy`.
-- **Lazy loading** — payload SSR reducido; bundles por idioma al llamar `changeLanguage()`.
+- **Lazy loading** — payload SSR reducido; bundles por idioma servidos como estáticos (corregido en PR [#4](https://github.com/gschz/astro-plugin-i18n/pull/4) para adapters serverless).
 - **SEO** — `I18nHead.astro` genera `hreflang`, `x-default` y meta Open Graph de locale.
 - **Multi-framework** — Hooks y stores nativos para React (`/react`), Vue (`/vue`), Svelte (`/svelte`) y Solid (`/solid`).
 - **DOM declarativo** — atributos `data-i18n-*` con `bindDataI18n` / `renderDataI18n`.
@@ -118,7 +118,6 @@ const i18nBootstrap = await getI18nClientBootstrapPayload(Astro.locals);
         translations: i18nBootstrap.translations,
         config: i18nBootstrap.config,
       };
-      window.__INITIAL_I18N_ALL_TRANSLATIONS__ = i18nBootstrap.allTranslations;
     </script>
   </head>
   <body>
@@ -131,7 +130,7 @@ const i18nBootstrap = await getI18nClientBootstrapPayload(Astro.locals);
 </html>
 ```
 
-Con `lazyLoading.enabled`, `allTranslations` viene vacio a proposito; el cliente hace fetch al cambiar de idioma.
+> **Nota:** Con `lazyLoading.enabled`, `allTranslations` viene vacio en el payload SSR; las traducciones se entregan al cliente via virtual module de Vite (`virtual:@gschz/astro-plugin-i18n/internal`) — no hay fetch, no hay inline masivo de JSON en el HTML. Implementado en PR [#4](https://github.com/gschz/astro-plugin-i18n/pull/4).
 
 ### 4. Consumir traducciones
 
@@ -217,29 +216,29 @@ i18n({
 });
 ```
 
-## Demo oficial (aún en progreso)
+## Demo
 
-La app en [`demo/`](demo/) cubre es, en y pt-BR con routing, namespaces, pluralizacion, lazy loading, `I18nHead` e islas React. Ver [demo/README.md](demo/README.md).
+La app en [`pkg/demo/`](pkg/demo/) cubre es, en y pt-BR con routing, namespaces, pluralizacion, lazy loading (corregido serverless), virtual module Vite, multi-framework (React, Vue, Svelte, Solid) y SEO completo. Desplegada en Vercel. Ver [pkg/demo/README.md](pkg/demo/README.md).
 
 ```bash
-cd demo && bun install && bun dev
+cd pkg/demo && bun install && bun dev
 ```
 
 ## Entry points
 
-| Entry point                                          | Uso                                                       |
-| ---------------------------------------------------- | --------------------------------------------------------- |
-| `@gschz/astro-plugin-i18n`                           | API central (SSR, utilidades server, configuración).      |
-| `@gschz/astro-plugin-i18n/client`                    | Solo API segura para browser.                             |
-| `@gschz/astro-plugin-i18n/react`                     | Hook y componentes para React.                            |
-| `@gschz/astro-plugin-i18n/vue`                       | Composable reactivo para Vue.                             |
-| `@gschz/astro-plugin-i18n/svelte`                    | Store nativo para Svelte.                                 |
-| `@gschz/astro-plugin-i18n/solid`                     | Hook reactivo para Solid.                                 |
-| `@gschz/astro-plugin-i18n/integration`               | Integracion en `astro.config.*`.                          |
-| `@gschz/astro-plugin-i18n/schema`                    | Schema Zod (validar opciones en config).                  |
-| `@gschz/astro-plugin-i18n/components/I18nText.astro` | Componente SSR de traduccion.                             |
-| `@gschz/astro-plugin-i18n/components/I18nHead.astro` | SEO: `hreflang` / Open Graph.                             |
-| `@gschz/astro-plugin-i18n/middleware-entrypoint`     | Avanzado; suele registrarse automatico.                   |
+| Entry point                                          | Uso                                                  |
+| ---------------------------------------------------- | ---------------------------------------------------- |
+| `@gschz/astro-plugin-i18n`                           | API central (SSR, utilidades server, configuración). |
+| `@gschz/astro-plugin-i18n/client`                    | Solo API segura para browser.                        |
+| `@gschz/astro-plugin-i18n/react`                     | Hook y componentes para React.                       |
+| `@gschz/astro-plugin-i18n/vue`                       | Composable reactivo para Vue.                        |
+| `@gschz/astro-plugin-i18n/svelte`                    | Store nativo para Svelte.                            |
+| `@gschz/astro-plugin-i18n/solid`                     | Hook reactivo para Solid.                            |
+| `@gschz/astro-plugin-i18n/integration`               | Integracion en `astro.config.*`.                     |
+| `@gschz/astro-plugin-i18n/schema`                    | Schema Zod (validar opciones en config).             |
+| `@gschz/astro-plugin-i18n/components/I18nText.astro` | Componente SSR de traduccion.                        |
+| `@gschz/astro-plugin-i18n/components/I18nHead.astro` | SEO: `hreflang` / Open Graph.                        |
+| `@gschz/astro-plugin-i18n/middleware-entrypoint`     | Avanzado; suele registrarse automatico.              |
 
 ## API y componentes
 
