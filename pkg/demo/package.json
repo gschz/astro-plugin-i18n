@@ -1,0 +1,38 @@
+{
+  "name": "astro-i18n-demo",
+  "type": "module",
+  "version": "0.1.0",
+  "scripts": {
+    "astro": "astro",
+    "dev": "astro dev",
+    "dev:debug": "ASTRO_I18N_DEBUG=1 astro dev",
+    "build": "astro build",
+    "check": "astro check",
+    "verify": "astro build && astro check",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "@astrojs/vercel": "10.0.8",
+    "@gschz/astro-plugin-i18n": "1.4.10-rc.1",
+    "astro": "6.4.4",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "solid-js": "1.9.13",
+    "svelte": "5.56.3",
+    "vue": "3.5.35"
+  },
+  "devDependencies": {
+    "@astrojs/node": "10.1.3",
+    "@astrojs/react": "5.0.7",
+    "@astrojs/solid-js": "6.0.1",
+    "@astrojs/svelte": "8.1.2",
+    "@astrojs/vue": "6.0.1",
+    "@tailwindcss/vite": "4.3.0",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "tailwindcss": "4.3.0"
+  },
+  "overrides": {
+    "vite": "^7"
+  }
+}

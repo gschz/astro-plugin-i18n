@@ -1,0 +1,13 @@
+---
+export const prerender = false;
+
+import BaseLayout from '~/layouts/BaseLayout.astro';
+import DemoView from '~/views/DemoView.astro';
+---
+
+<BaseLayout
+  titleKey="demo.meta.pageTitle"
+  descriptionKey="demo.meta.description"
+>
+  <DemoView />
+</BaseLayout>

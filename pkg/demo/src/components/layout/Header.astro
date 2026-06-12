@@ -1,0 +1,82 @@
+---
+import T from '@gschz/astro-plugin-i18n/components/I18nText.astro';
+import { LangToggle } from '@gschz/astro-plugin-i18n/react';
+import {
+  getLocalizedPath,
+  getCurrentLanguage,
+  getConfig,
+  translateAsync,
+} from '@gschz/astro-plugin-i18n';
+import type { Lang } from '~/types/i18n-types';
+import translateIcon from '~/icons/translate.svg';
+
+const lang = getCurrentLanguage(Astro.locals);
+const config = Astro.locals.i18n?.config || getConfig();
+const supportedLangs = config?.supportedLangs as Lang[];
+const srLabel = await translateAsync('nav.changeLanguage', { lang });
+
+function langLabel(code: Lang): string {
+  try {
+    const displayNames = new Intl.DisplayNames([code], { type: 'language' });
+    let name = displayNames.of(code);
+
+    if (name && name !== code) {
+      return name.charAt(0).toUpperCase() + name.slice(1);
+    }
+  } catch {
+    /* Intl opcional */
+  }
+
+  return code;
+}
+
+const languages = supportedLangs.map((code) => ({
+  code,
+  label: langLabel(code),
+}));
+
+const [homeHref, featuresHref, demoHref, frameworksHref] = [
+  getLocalizedPath('/', lang, config),
+  getLocalizedPath('/features', lang, config),
+  getLocalizedPath('/demo', lang, config),
+  getLocalizedPath('/frameworks', lang, config),
+];
+---
+
+<header class="sticky top-0 z-50 glass-header">
+  <div
+    class="container-custom flex items-center justify-between flex-wrap gap-3 py-3 sm:py-0 sm:h-16"
+  >
+    <a href={homeHref} class="flex items-center gap-2 group shrink-0">
+      <span
+        class="font-semibold text-slate-900 group-hover:text-slate-600 transition-colors"
+      >
+        <T key="nav.brand" />
+      </span>
+    </a>
+
+    <!-- Navigation -->
+    <nav
+      class="flex flex-1 flex-wrap items-center justify-center gap-1 sm:gap-4 sm:justify-start"
+      aria-label="Main"
+    >
+      <a class="btn-ghost" href={homeHref}><T key="nav.home" /></a>
+      <a class="btn-ghost" href={featuresHref}><T key="nav.features" /></a>
+      <a class="btn-ghost" href={demoHref}><T key="nav.demo" /></a>
+      <a class="btn-ghost" href={frameworksHref}><T key="nav.frameworks" /></a>
+    </nav>
+
+    <!-- Language Toggle -->
+    <div class="flex shrink-0 items-center gap-2">
+      <LangToggle
+        client:load
+        languages={languages}
+        currentLang={lang}
+        ariaLabel={srLabel}
+      >
+        {/* Use a custom icon */}
+        <img src={translateIcon.src} width="20" height="20" alt="" />
+      </LangToggle>
+    </div>
+  </div>
+</header>

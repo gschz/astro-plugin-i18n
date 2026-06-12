@@ -1,0 +1,73 @@
+{
+  "environment": "Demo",
+  "layout": {
+    "titleSuffix": "| astro-plugin-i18n demo"
+  },
+  "nav": {
+    "brand": "astro-plugin-i18n",
+    "home": "Inicio",
+    "features": "Características",
+    "demo": "Demo interactiva",
+    "frameworks": "Frameworks",
+    "changeLanguage": "Cambiar idioma"
+  },
+  "footer": {
+    "madeWith": "Demo del paquete npm",
+    "copyright": "© {year} MIT · Sin garantías"
+  },
+  "greeting": "Hola {name}, tienes {count} mensajes pendientes.",
+  "notifications": {
+    "count_zero": "No hay notificaciones",
+    "count_one": "Tienes {count} notificación",
+    "count_other": "Tienes {count} notificaciones"
+  },
+  "sections": {
+    "server": {
+      "title": "SSR consistente",
+      "body": "I18nText resuelve traducciones en servidor y mantiene contenido estable en la respuesta inicial."
+    },
+    "variables": {
+      "title": "Interpolación tipada",
+      "body": "Inserta variables dinámicas de forma segura en componentes Astro y React."
+    }
+  },
+  "controls": {
+    "title": "Cambio de idioma en cliente",
+    "body": "Los botones actualizan nodos data-i18n y componentes React sin recargar la página.",
+    "clientStatus": "caché del cliente lista"
+  },
+  "routing": {
+    "title": "Routing i18n",
+    "body": "Enlaces localizados según la estrategia prefix-except-default: español sin prefijo, otros idiomas con prefijo.",
+    "currentPath": "Ruta actual: {path}",
+    "linkHome": "Inicio (este idioma)",
+    "linkEnglish": "Inicio en inglés",
+    "linkBrazil": "Inicio en pt-BR"
+  },
+  "demo": {
+    "meta": {
+      "pageTitle": "Demo interactiva",
+      "description": "Islas React, pluralización, interpolación en vivo y LangToggle."
+    },
+    "sections": {
+      "interpolation": {
+        "title": "Interpolación dinámica",
+        "body": "Edita el nombre y el número en cliente."
+      },
+      "plural": {
+        "title": "Pluralización",
+        "body": "Las claves count_zero / count_one / count_other siguen Intl.PluralRules."
+      }
+    },
+    "react": {
+      "title": "Isla React",
+      "description": "LangToggle, TranslatedText, useTranslation, setupLanguageObserver y la API global del cliente.",
+      "hookTitle": "Estado reactivo del hook",
+      "globalTitle": "API global del cliente",
+      "currentLanguage": "Idioma desde hook: {lang}",
+      "observedLanguage": "Idioma desde observer: {lang}",
+      "eventCount": "Cambios detectados: {count}",
+      "forcedPreview": "Vista previa en {lang} con tGlobal()"
+    }
+  }
+}

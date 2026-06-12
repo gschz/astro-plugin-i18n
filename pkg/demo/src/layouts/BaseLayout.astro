@@ -1,0 +1,94 @@
+---
+import I18nHead from '@gschz/astro-plugin-i18n/components/I18nHead.astro';
+import {
+  getCurrentLanguage,
+  getI18nClientBootstrapPayload,
+  translateAsync,
+} from '@gschz/astro-plugin-i18n';
+import Header from '~/components/layout/Header.astro';
+import Footer from '~/components/layout/Footer.astro';
+import type { I18nKey } from '~/types/i18n-types';
+import '~/styles/global.css';
+
+interface Props {
+  titleKey?: I18nKey;
+  descriptionKey?: I18nKey;
+}
+
+const {
+  titleKey = 'home:meta.pageTitle',
+  descriptionKey = 'home:meta.description',
+} = Astro.props;
+
+const i18nBootstrap = await getI18nClientBootstrapPayload(Astro.locals);
+const lang = getCurrentLanguage(Astro.locals);
+
+const [titleSeg, suffix] = [
+  await translateAsync(titleKey, { lang }),
+  await translateAsync('layout.titleSuffix', { lang }),
+];
+
+const pageTitle = `${titleSeg} ${suffix}`.trim();
+const pageDescription = await translateAsync(descriptionKey, { lang });
+
+const siteOrigin = import.meta.env.PUBLIC_SITE_URL ?? Astro.url.origin;
+const canonicalUrl = new URL(Astro.url.pathname, siteOrigin).toString();
+---
+
+<!doctype html>
+<html lang={i18nBootstrap.lang}>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      rel="preconnect"
+      href="https://fonts.gstatic.com"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="description" content={pageDescription} />
+    <meta name="robots" content="index,follow,max-image-preview:large" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta name="theme-color" content="#f8fafc" />
+    <meta name="application-name" content="astro-plugin-i18n demo" />
+    <link rel="canonical" href={canonicalUrl} />
+    <I18nHead
+      currentLang={i18nBootstrap.lang}
+      currentPath={Astro.url.pathname}
+      siteUrl={siteOrigin}
+    />
+    <title>{pageTitle}</title>
+
+    <script is:inline define:vars={{ i18nBootstrap }}>
+      window.__INITIAL_I18N_STATE__ = {
+        lang: i18nBootstrap.lang,
+        translations: i18nBootstrap.translations,
+        config: i18nBootstrap.config,
+      };
+    </script>
+  </head>
+  <body
+    class="noise-bg relative flex min-h-screen flex-col bg-slate-50 font-sans antialiased"
+  >
+    <Header />
+    <slot />
+    <Footer />
+
+    <script>
+      import {
+        bindDataI18n,
+        bootstrapClientI18n,
+      } from '@gschz/astro-plugin-i18n/client';
+
+      bootstrapClientI18n();
+      bindDataI18n({ waitForReady: true });
+    </script>
+  </body>
+</html>

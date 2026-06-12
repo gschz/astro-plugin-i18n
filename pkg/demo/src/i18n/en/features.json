@@ -1,0 +1,51 @@
+{
+  "meta": {
+    "pageTitle": "Plugin features",
+    "description": "What @gschz/astro-plugin-i18n covers compared to basic Astro i18n."
+  },
+  "title": "Features",
+  "intro": "SSR-stable rendering, explicit routing and predictable DX for Astro 6+ apps.",
+  "fallbackExample": {
+    "title": "Language fallback",
+    "line": "This is the English string. If you are viewing the Portuguese page, you are seeing this because the Portuguese translation is intentionally missing.",
+    "hint": "(Switch to Portuguese to see this fallback in action)"
+  },
+  "headings": {
+    "compare": "Quick comparison",
+    "code": "Minimal example",
+    "list": "Capability checklist"
+  },
+  "compare": {
+    "feature": "Area",
+    "native": "Astro collections / manual",
+    "plugin": "@gschz/astro-plugin-i18n"
+  },
+  "rows": {
+    "routing": {
+      "feature": "Locale routes",
+      "native": "Manual getStaticPaths / custom middleware",
+      "plugin": "prefix / prefix-except-default strategies + redirects"
+    },
+    "ssr": {
+      "feature": "SSR + client",
+      "native": "Mix several patterns",
+      "plugin": "translateAsync + bootstrap + flat client cache"
+    },
+    "bundles": {
+      "feature": "Payload",
+      "native": "All HTML or static imports",
+      "plugin": "Optional lazy JSON bundles under /i18n/"
+    }
+  },
+  "list": {
+    "namespaces": "JSON namespaces per locale",
+    "plural": "Pluralization via Intl.PluralRules",
+    "seo": "I18nHead hreflang helpers",
+    "declarative": "Declarative data-i18n-* DOM",
+    "audit": "Optional auditOnBuild"
+  },
+  "code": {
+    "caption": "astro.config.mjs (excerpt)",
+    "snippet": "import i18n from '@gschz/astro-plugin-i18n/integration';\n\nexport default defineConfig({\n  integrations: [\n    i18n({\n      defaultLang: 'es',\n      supportedLangs: ['es', 'en', 'pt-BR'],\n      lazyLoading: { enabled: true, publicPath: '/i18n', preloadNamespaces: ['common'] },\n    }),\n  ],\n});"
+  }
+}

@@ -1,0 +1,13 @@
+---
+export const prerender = false;
+
+import BaseLayout from '~/layouts/BaseLayout.astro';
+import FrameworksView from '~/views/FrameworksView.astro';
+---
+
+<BaseLayout
+  titleKey="frameworks:frameworks.title"
+  descriptionKey="frameworks:frameworks.description"
+>
+  <FrameworksView />
+</BaseLayout>

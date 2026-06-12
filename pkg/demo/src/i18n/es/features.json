@@ -1,0 +1,51 @@
+{
+  "meta": {
+    "pageTitle": "Características del plugin",
+    "description": "Qué cubre @gschz/astro-plugin-i18n frente al i18n básico de Astro."
+  },
+  "title": "Características",
+  "intro": "Este paquete se centra en SSR estable, routing explícito y una DX predecible para proyectos Astro 6+.",
+  "fallbackExample": {
+    "title": "Fallback de idioma",
+    "line": "Esta es la cadena en español. El idioma portugués (pt-BR) está configurado para mostrar el texto en inglés si le falta una traducción.",
+    "hint": "(Cambia a portugués para ver cómo esta frase aparece en inglés)"
+  },
+  "headings": {
+    "compare": "Comparativa rápida",
+    "code": "Ejemplo mínimo",
+    "list": "Lista de capacidades"
+  },
+  "compare": {
+    "feature": "Área",
+    "native": "Astro content collections / manual",
+    "plugin": "@gschz/astro-plugin-i18n"
+  },
+  "rows": {
+    "routing": {
+      "feature": "Rutas por idioma",
+      "native": "Manual con getStaticPaths / middleware propio",
+      "plugin": "Estrategias prefix / prefix-except-default + redirects"
+    },
+    "ssr": {
+      "feature": "SSR + cliente",
+      "native": "Combina APIs variadas",
+      "plugin": "translateAsync + bootstrap + cache plana en cliente"
+    },
+    "bundles": {
+      "feature": "Payload",
+      "native": "Todo en HTML o imports estáticos",
+      "plugin": "Lazy bundles JSON opcionales en /i18n/"
+    }
+  },
+  "list": {
+    "namespaces": "Namespaces JSON por idioma",
+    "plural": "Pluralización con Intl.PluralRules",
+    "seo": "I18nHead con hreflang",
+    "declarative": "DOM declarativo data-i18n-*",
+    "audit": "auditOnBuild opcional"
+  },
+  "code": {
+    "caption": "astro.config.mjs (extracto)",
+    "snippet": "import i18n from '@gschz/astro-plugin-i18n/integration';\n\nexport default defineConfig({\n  integrations: [\n    i18n({\n      defaultLang: 'es',\n      supportedLangs: ['es', 'en', 'pt-BR'],\n      lazyLoading: { enabled: true, publicPath: '/i18n', preloadNamespaces: ['common'] },\n    }),\n  ],\n});"
+  }
+}

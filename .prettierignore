@@ -3,6 +3,8 @@ node_modules
 bun.lock
 
 pkg/demo/.astro
+pkg/demo/.vercel
+pkg/demo/.netlify
 pkg/demo/dist
 pkg/demo/node_modules
 pkg/demo/src/types/i18n-types.d.ts

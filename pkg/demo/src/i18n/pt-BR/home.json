@@ -1,0 +1,35 @@
+{
+  "meta": {
+    "pageTitle": "astro-plugin-i18n demo",
+    "description": "Landing multilíngue: SSR, namespaces, lazy loading e rotas por idioma."
+  },
+  "hero": {
+    "declarativeHint": "Este parágrafo usa data-i18n-key e atualiza ao mudar o idioma.",
+    "title": "Internacionalização para Astro, sem atrito",
+    "subtitle": "Integração com {product}: SSR primeiro, tipos opcionais e bundles por idioma."
+  },
+  "cards": {
+    "routing": {
+      "title": "Roteamento integrado",
+      "body": "Prefixo opcional, redirects e cookie i18n-lang na próxima visita."
+    },
+    "lazy": {
+      "title": "Lazy loading",
+      "body": "Payload inicial menor; o cliente baixa /i18n/{lang}.json quando precisa."
+    },
+    "dx": {
+      "title": "DX",
+      "body": "generateTypes, auditOnBuild, HMR de JSON em dev e schema para astro add."
+    },
+    "islands": {
+      "title": "Ilhas React",
+      "body": "useTranslation e LangToggle sem acoplar React ao núcleo do plugin."
+    }
+  },
+  "tryIt": {
+    "title": "Experimente",
+    "body": "Abra a demo interativa para pluralização, interpolação e troca de idioma sem recarregar.",
+    "ctaDemo": "Ir para a demo",
+    "ctaFeatures": "Lista de recursos"
+  }
+}
