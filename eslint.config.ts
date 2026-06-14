@@ -1,43 +1,32 @@
 import js from '@eslint/js';
-import astroParser from 'astro-eslint-parser';
 import astroPlugin from 'eslint-plugin-astro';
-import reactPlugin from 'eslint-plugin-react';
+import importPlugin from 'eslint-plugin-import';
 import reactHooks from 'eslint-plugin-react-hooks';
-import tseslint from '@typescript-eslint/eslint-plugin';
-import tsParser from '@typescript-eslint/parser';
+import { defineConfig } from 'eslint/config';
 import globals from 'globals';
+import tseslint from 'typescript-eslint';
 
-export default [
+export default defineConfig(
   {
-    ignores: ['dist/**', '.astro/**', 'node_modules/**', 'demo/.astro/**', 'demo/dist/**', 'demo/node_modules/**'],
+    ignores: ['**/{dist,.astro,node_modules,coverage,.vercel,.netlify}/**'],
   },
-  js.configs.recommended,
+
   {
-    files: ['**/*.{ts,tsx,mts,cts}'],
+    files: ['**/*.{js,mjs,cjs,ts,tsx,mts,cts}'],
+    extends: [
+      js.configs.recommended,
+      tseslint.configs.strict,
+      tseslint.configs.stylistic,
+    ],
     languageOptions: {
-      parser: tsParser,
+      ecmaVersion: 'latest',
+      sourceType: 'module',
       parserOptions: {
-        ecmaVersion: 'latest',
-        sourceType: 'module',
-      },
-      globals: {
-        ...globals.browser,
-        ...globals.node,
-      },
-    },
-    plugins: {
-      '@typescript-eslint': tseslint,
-      react: reactPlugin,
-      'react-hooks': reactHooks,
-    },
-    settings: {
-      react: {
-        version: 'detect',
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
       },
     },
     rules: {
-      'no-undef': 'off',
-      'no-unused-vars': 'off',
       '@typescript-eslint/no-unused-vars': [
         'warn',
         {
@@ -46,47 +35,113 @@ export default [
         },
       ],
       '@typescript-eslint/no-explicit-any': 'off',
-      'react/react-in-jsx-scope': 'off',
-      'react/prop-types': 'off',
-      'react-hooks/rules-of-hooks': 'error',
-      'react-hooks/exhaustive-deps': 'warn',
+      '@typescript-eslint/consistent-type-imports': [
+        'error',
+        { fixStyle: 'inline-type-imports', prefer: 'type-imports' },
+      ],
+      '@typescript-eslint/consistent-type-exports': 'error',
     },
   },
+
   {
-    files: ['**/*.astro'],
+    files: ['**/*.{ts,tsx,mts,cts}'],
+    extends: [
+      importPlugin.flatConfigs.recommended,
+      importPlugin.flatConfigs.typescript,
+    ],
     languageOptions: {
-      parser: astroParser,
-      parserOptions: {
-        parser: tsParser,
-        extraFileExtensions: ['.astro'],
-      },
       globals: {
+        ...globals.node,
         ...globals.browser,
       },
     },
-    plugins: {
-      astro: astroPlugin,
+    settings: {
+      'import/resolver': {
+        typescript: {
+          alwaysTryTypes: true,
+          noWarnOnMultipleProjects: true,
+          project: ['./tsconfig.json', './pkg/{demo,template}/tsconfig.json'],
+        },
+        node: true,
+      },
     },
     rules: {
-      'no-undef': 'off',
-      'astro/no-set-html-directive': 'off',
+      'import/no-unresolved': [
+        'error',
+        {
+          ignore: ['^astro:', '^virtual:'],
+        },
+      ],
     },
   },
+
+  {
+    files: ['**/*.{jsx,tsx}'],
+    extends: [reactHooks.configs.flat['recommended-latest']],
+    languageOptions: {
+      globals: globals.browser,
+    },
+  },
+
+  {
+    extends: astroPlugin.configs['flat/recommended'],
+  },
+
+  {
+    files: ['**/*.astro'],
+    extends: [
+      js.configs.recommended,
+      tseslint.configs.strict,
+      tseslint.configs.stylistic,
+      astroPlugin.configs['flat/recommended'],
+    ],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      parserOptions: {
+        parser: '@typescript-eslint/parser',
+        project: ['./tsconfig.json', './pkg/{demo,template}/tsconfig.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    rules: {
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+        },
+      ],
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/consistent-type-imports': [
+        'error',
+        { fixStyle: 'inline-type-imports', prefer: 'type-imports' },
+      ],
+      '@typescript-eslint/consistent-type-exports': 'error',
+    },
+  },
+
   {
     files: ['tests/**/*.{ts,tsx}'],
     languageOptions: {
       globals: {
         ...globals.node,
-        describe: 'readonly',
-        it: 'readonly',
-        test: 'readonly',
-        expect: 'readonly',
-        beforeEach: 'readonly',
-        afterEach: 'readonly',
-        beforeAll: 'readonly',
-        afterAll: 'readonly',
-        vi: 'readonly',
+        ...globals.vitest,
       },
     },
   },
-];
+
+  {
+    files: ['**/*.d.ts'],
+    rules: {
+      '@typescript-eslint/triple-slash-reference': 'off',
+    },
+  },
+
+  {
+    files: ['eslint.config.ts'],
+    rules: {
+      'import/no-named-as-default-member': 'off',
+    },
+  },
+);

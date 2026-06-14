@@ -1,0 +1,24 @@
+{
+  "frameworks": {
+    "title": "Suporte Multi-Framework",
+    "description": "O plugin funciona nativamente integrado com React, Vue, Svelte e Solid, mantendo a reatividade do idioma sincronizada entre todas as ilhas automaticamente."
+  },
+  "counter": {
+    "items": "Itens: {count}",
+    "items_zero": "Nenhum item",
+    "items_one": "1 item",
+    "items_other": "{count} itens"
+  },
+  "code": {
+    "react": "Código React:",
+    "vue": "Código Vue:",
+    "svelte": "Código Svelte:",
+    "solid": "Código Solid:"
+  },
+  "changeLanguage": {
+    "react": "Alterar idioma a partir do React:",
+    "vue": "Alterar idioma a partir do Vue:",
+    "svelte": "Alterar idioma a partir do Svelte:",
+    "solid": "Alterar idioma a partir do Solid:"
+  }
+}

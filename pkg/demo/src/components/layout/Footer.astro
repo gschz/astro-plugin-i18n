@@ -1,0 +1,92 @@
+---
+import T from '@gschz/astro-plugin-i18n/components/I18nText.astro';
+import {
+  getLocalizedPath,
+  getCurrentLanguage,
+  getConfig,
+} from '@gschz/astro-plugin-i18n';
+
+const lang = getCurrentLanguage(Astro.locals);
+const config = Astro.locals.i18n?.config || getConfig();
+
+const [homeHref, featuresHref, demoHref] = [
+  getLocalizedPath('/', lang, config),
+  getLocalizedPath('/features', lang, config),
+  getLocalizedPath('/demo', lang, config),
+];
+
+const year = String(new Date().getFullYear());
+
+const projectLinks = [
+  {
+    title: 'npm',
+    href: 'https://www.npmjs.com/package/@gschz/astro-plugin-i18n',
+  },
+  {
+    title: 'GitHub',
+    href: 'https://github.com/gschz/astro-plugin-i18n',
+  },
+  {
+    title: 'DeepWiki',
+    href: 'https://deepwiki.com/gschz/astro-plugin-i18n',
+  },
+];
+---
+
+<footer class="mt-auto border-t border-slate-200 bg-white/50 py-12">
+  <div
+    class="container-custom flex flex-col gap-8 sm:flex-row sm:items-start sm:justify-between"
+  >
+    <div class="max-w-md space-y-3">
+      <div class="flex items-center gap-2">
+        <span class="font-semibold text-slate-900 text-base">
+          <T key="nav.brand" />
+        </span>
+      </div>
+      <p class="text-sm leading-relaxed text-slate-500">
+        <T key="footer.madeWith" />
+      </p>
+      <p class="text-xs text-slate-400">
+        <T key="footer.copyright" values={{ year }} />
+      </p>
+    </div>
+    <div class="flex flex-wrap gap-x-8 gap-y-4 text-sm">
+      <nav class="flex flex-col gap-2" aria-label="Footer">
+        <span
+          class="text-xs font-semibold uppercase tracking-wider text-slate-400"
+          >Pages</span
+        >
+        <a
+          class="text-slate-600 hover:text-slate-900 transition-colors"
+          href={homeHref}><T key="nav.home" /></a
+        >
+        <a
+          class="text-slate-600 hover:text-slate-900 transition-colors"
+          href={featuresHref}><T key="nav.features" /></a
+        >
+        <a
+          class="text-slate-600 hover:text-slate-900 transition-colors"
+          href={demoHref}><T key="nav.demo" /></a
+        >
+      </nav>
+      <div class="flex flex-col gap-2">
+        <span
+          class="text-xs font-semibold uppercase tracking-wider text-slate-400"
+          >Project</span
+        >
+        {
+          projectLinks.map((link) => (
+            <a
+              class="text-slate-600 hover:text-slate-900 transition-colors"
+              href={link.href}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {link.title}
+            </a>
+          ))
+        }
+      </div>
+    </div>
+  </div>
+</footer>

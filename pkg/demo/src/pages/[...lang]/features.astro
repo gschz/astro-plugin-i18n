@@ -1,0 +1,13 @@
+---
+export const prerender = false;
+
+import BaseLayout from '~/layouts/BaseLayout.astro';
+import FeaturesView from '~/views/FeaturesView.astro';
+---
+
+<BaseLayout
+  titleKey="features:meta.pageTitle"
+  descriptionKey="features:meta.description"
+>
+  <FeaturesView />
+</BaseLayout>

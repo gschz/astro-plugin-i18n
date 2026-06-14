@@ -1,0 +1,34 @@
+---
+import T from '@gschz/astro-plugin-i18n/components/I18nText.astro';
+---
+
+<section class="glass-card p-8 sm:p-12">
+  <div
+    class="badge-glass bg-indigo-50/60 border border-indigo-200/50 text-indigo-700 mb-5 w-fit"
+  >
+    <span class="w-1.5 h-1.5 bg-indigo-600 rounded-full animate-pulse"></span>
+    <T key="environment" />
+  </div>
+  <T
+    key="home:hero.title"
+    element="h1"
+    class="max-w-4xl text-balance text-3xl font-bold tracking-tight text-slate-900 sm:text-5xl md:text-6xl leading-tight"
+  />
+  <T
+    key="home:hero.subtitle"
+    element="p"
+    values={{ product: '@gschz/astro-plugin-i18n' }}
+    class="mt-4 max-w-2xl text-base leading-relaxed text-slate-500 sm:text-lg"
+  />
+  <p
+    class="mt-4 max-w-2xl text-sm leading-relaxed text-slate-400"
+    data-i18n-key="home:hero.declarativeHint"
+  >
+  </p>
+  <div class="mt-6 flex flex-wrap gap-2">
+    <span class="tag-pill">SSR first</span>
+    <span class="tag-pill">Astro + React</span>
+    <span class="tag-pill">Lazy /i18n</span>
+    <span class="tag-pill">auditOnBuild</span>
+  </div>
+</section>

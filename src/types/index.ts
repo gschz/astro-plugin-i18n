@@ -16,9 +16,11 @@
  * - Si el consumidor ejecuta `generateTypes`, este registro se completa con
  *   uniones literales reales y la API pública queda tipada automáticamente.
  */
-export interface AstroI18nTypeRegistry {}
+export type AstroI18nTypeRegistry = object;
 
-type RegistryLanguage = AstroI18nTypeRegistry extends { Language: infer L } ? L : string;
+type RegistryLanguage = AstroI18nTypeRegistry extends { Language: infer L }
+  ? L
+  : string;
 
 type RegistryTranslationKey = AstroI18nTypeRegistry extends {
   TranslationKey: infer K;
@@ -32,7 +34,9 @@ type RegistryTranslationKey = AstroI18nTypeRegistry extends {
  * Por defecto es `string`, pero puede convertirse en una unión de literales
  * cuando `generateTypes` genera augmentation del registro.
  */
-export type Language = RegistryLanguage extends string ? RegistryLanguage : string;
+export type Language = RegistryLanguage extends string
+  ? RegistryLanguage
+  : string;
 
 /**
  * Clave de traducción, normalmente en notación de puntos (ej. `"home.title"`).
@@ -40,15 +44,15 @@ export type Language = RegistryLanguage extends string ? RegistryLanguage : stri
  * Por defecto es `string`, pero puede convertirse en una unión de literales
  * derivada de los JSON cuando `generateTypes` está activo.
  */
-export type TranslationKey = RegistryTranslationKey extends string ? RegistryTranslationKey : string;
+export type TranslationKey = RegistryTranslationKey extends string
+  ? RegistryTranslationKey
+  : string;
 
 /**
  * Valores de interpolación para reemplazar placeholders `{variable}` dentro
  * de una cadena de traducción.
  */
-export interface TranslationValues {
-  [key: string]: string | number | boolean;
-}
+export type TranslationValues = Record<string, string | number | boolean>;
 
 /**
  * Opciones opcionales que se pueden pasar a las funciones de traducción.
@@ -63,6 +67,55 @@ export interface TranslationOptions {
   lang?: Language;
 }
 
+/** Configuracion opcional de namespaces para dividir archivos de traduccion. */
+export interface I18nNamespacesOptions {
+  /** Activa el modo namespaces. Si es `false`, usa un solo JSON por idioma. */
+  enabled?: boolean;
+  /** Namespace por defecto cuando la key no incluye separador. */
+  defaultNamespace?: string;
+  /** Separador entre namespace y key (por defecto `:`). */
+  separator?: string;
+}
+
+/** Configuracion opcional de pluralizacion para resolver claves por categoria. */
+export interface I18nPluralizationOptions {
+  /** Activa la pluralizacion automatica. Por defecto `true`. */
+  enabled?: boolean;
+  /** Campo dentro de `values` que contiene el contador (por defecto `count`). */
+  field?: string;
+}
+
+/** Estrategias de lazy loading soportadas. */
+export type I18nLazyLoadingStrategy = 'language' | 'namespace' | 'hybrid';
+
+/** Configuracion opcional de lazy loading de traducciones. */
+export interface I18nLazyLoadingOptions {
+  /** Si es `true`, habilita el lazy loading por idioma. */
+  enabled?: boolean;
+  /** Estrategia de lazy loading (solo `language` soportada en v1.3.x). */
+  strategy?: I18nLazyLoadingStrategy;
+  /** Namespaces que siempre se incluyen en el payload SSR inicial. */
+  preloadNamespaces?: string[];
+  /** Ruta publica donde se sirven los bundles JSON. Por defecto `"/i18n"`. */
+  publicPath?: string;
+}
+
+/** Estrategias de enrutado multilingüe soportadas por el plugin. */
+export type I18nRoutingStrategy = 'manual' | 'prefix' | 'prefix-except-default';
+
+/**
+ * Configuración opcional del routing i18n.
+ *
+ * - `manual`: no aplica redirects automáticos.
+ * - `prefix`: exige prefijo de idioma para todas las rutas (`/es/...`, `/en/...`).
+ * - `prefix-except-default`: el idioma por defecto no lleva prefijo.
+ */
+export interface I18nRoutingOptions {
+  strategy?: I18nRoutingStrategy;
+  prefixDefaultLocale?: boolean;
+  redirectToDefaultLocale?: boolean;
+}
+
 /**
  * Configuración completa del plugin.
  * Todos los campos son opcionales para mayor ergonomía, pero `defaultLang`
@@ -73,6 +126,10 @@ export interface TranslationConfig {
   defaultLang?: Language;
   /** Lista de idiomas que la aplicación soporta activamente. */
   supportedLangs?: Language[];
+  /** Cadena de fallback por idioma, ej: { fr: 'en', pt: 'es' }. */
+  fallback?: Record<string, Language>;
+  /** Configuración de routing multilingüe. Por defecto usa estrategia `manual`. */
+  routing?: I18nRoutingOptions;
   /** Ruta al directorio que contiene los archivos JSON de traducción. Por defecto `"./src/i18n"`. */
   translationsDir?: string;
   /**
@@ -99,6 +156,18 @@ export interface TranslationConfig {
    * - `"error"`: imprime error en consola y devuelve `[MISSING: key]`.
    */
   missingKeyStrategy?: 'key' | 'empty' | 'error';
+  /** Opciones para namespaces (multiples archivos por idioma). */
+  namespaces?: I18nNamespacesOptions;
+  /** Opciones para pluralizacion basada en Intl.PluralRules. */
+  pluralization?: I18nPluralizationOptions;
+  /** Opciones de lazy loading para bundles de traduccion. */
+  lazyLoading?: I18nLazyLoadingOptions;
+  /**
+   * Si es `true`, ejecuta una auditoría de cobertura al finalizar el build
+   * (`astro build`) y emite warnings por cada idioma con claves faltantes.
+   * Por defecto `false`.
+   */
+  auditOnBuild?: boolean;
 }
 
 /** Alias de {@link TranslationConfig} expuesto como nombre de opción pública. */
@@ -112,4 +181,14 @@ declare global {
    * Solo se escribe en contextos de servidor (Astro SSR/dev).
    */
   var __ASTRO_I18N_OPTIONS__: Partial<I18nPluginOptions> | undefined;
+
+  /**
+   * Opciones del plugin serializadas como JSON string e inlineadas por Vite
+   * via `vite.define` durante el build. Es la unica fuente fiable en runtimes
+   * serverless porque se escribe como literal string en el bundle compilado.
+   *
+   * Solo disponible en el bundle de servidor; en tests se simula asignando
+   * directamente a `globalThis.__ASTRO_I18N_RUNTIME_OPTIONS__`.
+   */
+  var __ASTRO_I18N_RUNTIME_OPTIONS__: string | undefined;
 }

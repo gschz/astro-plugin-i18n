@@ -1,0 +1,13 @@
+---
+export const prerender = false;
+
+import BaseLayout from '~/layouts/BaseLayout.astro';
+import HomeView from '~/views/HomeView.astro';
+---
+
+<BaseLayout
+  titleKey="home:meta.pageTitle"
+  descriptionKey="home:meta.description"
+>
+  <HomeView />
+</BaseLayout>

@@ -5,16 +5,34 @@
  * para evitar que Vite/Rollup intente incluir módulos de Node.js (`fs`, `path`)
  * en el bundle del cliente, lo que generaría advertencias y fallos en el browser.
  *
- * Re-exporta únicamente las funciones y tipos que son seguros para ejecutarse en
- * el navegador. Las funciones de carga de archivos (`loadTranslations`, etc.)
- * quedan disponibles solo a través del entrypoint raíz para uso en SSR.
- *
  * @module @gschz/astro-plugin-i18n/client
  */
 
-export type { AstroI18nTypeRegistry, Language, TranslationKey, TranslationOptions, TranslationValues } from './types';
+import { allTranslations as _i18nAllTranslations } from 'virtual:@gschz/astro-plugin-i18n/internal';
+import { populateClientCache } from './core/translate';
+
+// Poblamos la caché del cliente con todas las traducciones al cargar el módulo.
+// Esto garantiza que t() funcione inmediatamente sin necesidad de bootstrap ni
+// fetch(). El módulo virtual es resuelto por Vite en tiempo de build/dev.
+for (const [lang, translations] of Object.entries(_i18nAllTranslations)) {
+  populateClientCache(lang, translations);
+}
+
+export type {
+  AstroI18nTypeRegistry,
+  I18nLazyLoadingOptions,
+  I18nLazyLoadingStrategy,
+  I18nNamespacesOptions,
+  I18nPluralizationOptions,
+  Language,
+  TranslationKey,
+  TranslationOptions,
+  TranslationValues,
+} from './types';
 
 export { bindDataI18n, renderDataI18n } from './core/dom';
+
+export { getConfig, getSupportedLanguages } from './core/config';
 
 export {
   bootstrapClientI18n,
@@ -22,6 +40,7 @@ export {
   getCurrentLanguage,
   setupLanguage,
   setupLanguageObserver,
+  syncLanguageRoute,
 } from './core/language';
 
-export { populateClientCache, t, useTranslation } from './core/translate';
+export { populateClientCache, t } from './core/translate';

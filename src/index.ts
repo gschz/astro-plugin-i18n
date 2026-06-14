@@ -4,16 +4,17 @@
  * Expone la API pública completa del plugin: tipos, funciones de traducción,
  * gestión de idioma, configuración, carga de archivos (servidor) y componentes.
  *
- * Para código de cliente (browser), usa el entrypoint dedicado:
- * `@gschz/astro-plugin-i18n/client`
- *
  * @module @gschz/astro-plugin-i18n
  */
 
 // ── Tipos públicos ─────────────────────────────────────────────────────────
 export type {
   AstroI18nTypeRegistry,
+  I18nLazyLoadingOptions,
+  I18nLazyLoadingStrategy,
+  I18nNamespacesOptions,
   I18nPluginOptions,
+  I18nPluralizationOptions,
   Language,
   TranslationConfig,
   TranslationKey,
@@ -22,7 +23,8 @@ export type {
 } from './types';
 
 // ── Traducción (cliente + servidor) ────────────────────────────────────────
-export { populateClientCache, t, translateAsync, useTranslation } from './core/translate';
+export { populateClientCache, t } from './core/translate';
+export { translateAsync } from './core/translate-async';
 
 // ── Gestión de idioma ──────────────────────────────────────────────────────
 export {
@@ -31,6 +33,7 @@ export {
   getCurrentLanguage,
   setupLanguage,
   setupLanguageObserver,
+  syncLanguageRoute,
 } from './core/language';
 
 // ── Configuración ──────────────────────────────────────────────────────────
@@ -59,10 +62,18 @@ export {
   reloadTranslations,
 } from './core/setup';
 
-// ── Componentes ────────────────────────────────────────────────────────────
-export { LangToggle } from './components/LangToggle';
-export { TranslatedText } from './components/TranslatedText';
+// ── SEO multilingüe ────────────────────────────────────────────────────────
+export {
+  getAlternateLinks,
+  getLocalizedPath,
+  getOgLocaleMap,
+  getXDefaultHref,
+  langToOgLocale,
+} from './core/seo';
 
-// ── Integración y utilidades de build ──────────────────────────────────────
-export { default as createI18nIntegration } from './integration';
+// ── Utilidades de build ────────────────────────────────────────────────────
 export { generateTranslationTypes } from './utils/type-generator';
+
+// ── Auditoría de cobertura (server-only) ───────────────────────────────────
+export { auditTranslationCoverage } from './core/audit';
+export type { TranslationCoverageResult } from './core/audit';

@@ -1,12 +1,24 @@
-import * as React from 'react';
-import { t as globalT, useTranslation } from '../core/translate';
-import type { Language, TranslationKey, TranslationValues } from '../types';
+import { createElement, memo } from 'react';
+import { t as globalT } from '~/core/translate';
+import type {
+  Language,
+  TranslationKey,
+  TranslationValues,
+} from '~/types/index';
+import { useTranslation } from './useTranslation';
 
 /** Props del componente React que renderiza una traducción. */
-interface TranslatedTextProps extends Omit<React.HTMLAttributes<HTMLElement>, 'children'> {
+interface TranslatedTextProps extends Omit<
+  React.HTMLAttributes<HTMLElement>,
+  'children'
+> {
+  /** Clave de traducción en notación de puntos. */
   textKey: TranslationKey;
+  /** Variables para interpolación en la traducción (`{name}`, `{count}`, etc.). */
   values?: TranslationValues;
+  /** Elemento HTML/React que envuelve el contenido (por defecto `span`). */
   as?: React.ElementType;
+  /** Fuerza idioma para este nodo, sin depender del idioma global actual. */
   lang?: Language;
   /** Fallback opcional cuando la estrategia actual devuelve la key sin traducir. */
   fallback?: React.ReactNode;
@@ -41,12 +53,14 @@ export const TranslatedText: React.FC<TranslatedTextProps> = ({
 }) => {
   const { t: hookT, language: globalLanguage } = useTranslation();
   const targetLanguage = lang || globalLanguage;
-  const translationFunction = targetLanguage === globalLanguage ? hookT : globalT;
+  const translationFunction =
+    targetLanguage === globalLanguage ? hookT : globalT;
   const translatedText = translationFunction(textKey, {
     values,
     lang: targetLanguage,
   });
-  const shouldUseFallback = fallback !== undefined && translatedText === String(textKey);
+  const shouldUseFallback =
+    fallback !== undefined && translatedText === String(textKey);
   const content = shouldUseFallback ? fallback : translatedText;
 
   if (render) {
@@ -63,10 +77,13 @@ export const TranslatedText: React.FC<TranslatedTextProps> = ({
     );
   }
 
-  return React.createElement(as, rest, content);
+  return createElement(as, rest, content);
 };
 
-function areTranslationValuesEqual(previousValues?: TranslationValues, nextValues?: TranslationValues): boolean {
+function areTranslationValuesEqual(
+  previousValues?: TranslationValues,
+  nextValues?: TranslationValues,
+): boolean {
   if (!previousValues && !nextValues) {
     return true;
   }
@@ -95,7 +112,10 @@ function areTranslationValuesEqual(previousValues?: TranslationValues, nextValue
   return true;
 }
 
-function areShallowEqualProps(previousProps: Record<string, unknown>, nextProps: Record<string, unknown>): boolean {
+function areShallowEqualProps(
+  previousProps: Record<string, unknown>,
+  nextProps: Record<string, unknown>,
+): boolean {
   const previousKeys = Object.keys(previousProps);
   const nextKeys = Object.keys(nextProps);
 
@@ -104,7 +124,7 @@ function areShallowEqualProps(previousProps: Record<string, unknown>, nextProps:
   }
 
   for (const key of previousKeys) {
-    if (!Object.prototype.hasOwnProperty.call(nextProps, key)) {
+    if (!Object.hasOwn(nextProps, key)) {
       return false;
     }
 
@@ -116,7 +136,7 @@ function areShallowEqualProps(previousProps: Record<string, unknown>, nextProps:
   return true;
 }
 
-export default React.memo(TranslatedText, (prevProps, nextProps) => {
+export default memo(TranslatedText, (prevProps, nextProps) => {
   if (!areTranslationValuesEqual(prevProps.values, nextProps.values)) {
     return false;
   }

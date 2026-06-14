@@ -7,6 +7,7 @@
  * junto con {@link populateClientCache} desde `./translate`.
  */
 
+import type { Dirent } from 'node:fs';
 import fsPromises from 'node:fs/promises';
 import path from 'node:path';
 import type { Language } from '../types';
@@ -15,9 +16,67 @@ import { getConfig } from './config';
 /**
  * Caché en memoria para traducciones ya cargadas desde disco.
  * La clave es el código de idioma; el valor es el objeto JSON parseado.
+ * En modo namespaces, el valor es un bundle `{ [namespace]: translations }`.
  * Se invalida explícitamente con {@link clearTranslationsCache}.
  */
 const translationsCache: Record<Language, Record<string, any>> = {};
+
+/**
+ * Identificador inlinado por Vite (via `vite.define`) en el hook
+ * `astro:config:setup` de la integracion. Contiene todas las traducciones
+ * de todos los idiomas soportados en un solo string JSON, lo que evita
+ * lecturas de disco en runtimes serverless (Vercel, Netlify, Cloudflare).
+ *
+ * {@link readBakedTranslations} es el unico punto de acceso a este valor.
+ */
+declare const __ASTRO_I18N_TRANSLATIONS__: string | undefined;
+
+/**
+ * Intenta leer las traducciones del identificador inlinado por Vite
+ * `__ASTRO_I18N_TRANSLATIONS__` o del fallback en `globalThis`.
+ * Es el primer intento antes de caer a lectura de disco, lo que permite
+ * que el plugin funcione en serverless sin archivos de traduccion fisicos.
+ *
+ * @param lang - Idioma solicitado.
+ * @returns Traducciones del idioma, o `undefined` si no estan disponibles.
+ */
+function readBakedTranslations(
+  lang: Language,
+): Record<string, any> | undefined {
+  if (
+    typeof __ASTRO_I18N_TRANSLATIONS__ === 'string' &&
+    __ASTRO_I18N_TRANSLATIONS__.length > 0
+  ) {
+    try {
+      const all = JSON.parse(__ASTRO_I18N_TRANSLATIONS__) as Record<
+        Language,
+        Record<string, any>
+      >;
+      return all[lang];
+    } catch {
+      // JSON corrupto, seguimos con el siguiente mecanismo.
+    }
+  }
+
+  if (typeof globalThis !== 'undefined') {
+    try {
+      const fromGlobal = (
+        globalThis as { __ASTRO_I18N_TRANSLATIONS__?: unknown }
+      ).__ASTRO_I18N_TRANSLATIONS__;
+      if (typeof fromGlobal === 'string' && fromGlobal.length > 0) {
+        const all = JSON.parse(fromGlobal) as Record<
+          Language,
+          Record<string, any>
+        >;
+        return all[lang];
+      }
+    } catch {
+      // globalThis no disponible o corrupto, ignoramos.
+    }
+  }
+
+  return undefined;
+}
 
 /**
  * Devuelve todas las traducciones para el idioma indicado.
@@ -29,54 +88,63 @@ const translationsCache: Record<Language, Record<string, any>> = {};
  * @param lang - Código de idioma (ej. `"en"`, `"es"`).
  * @returns Objeto JSON con todas las cadenas del idioma, o `{}` si no se encuentra el archivo.
  */
-export async function getTranslationsForLanguage(lang: Language): Promise<Record<string, any>> {
+export async function getTranslationsForLanguage(
+  lang: Language,
+): Promise<Record<string, any>> {
   return loadTranslations(lang);
 }
 
 /**
  * Carga las traducciones del idioma indicado, usando la caché si ya fueron leídas.
- * Resuelve la ruta al directorio `translationsDir` configurado y lee el archivo
- * `<lang>.json` correspondiente.
+ *
+ * - En modo legacy, lee el archivo `<lang>.json` dentro de `translationsDir`.
+ * - En modo namespaces, primero busca `translationsDir/<lang>/*.json` y, si no existe,
+ *   cae de vuelta al archivo `<lang>.json` para mantener compatibilidad.
  *
  * @param lang - Código de idioma (ej. `"en"`, `"es"`).
  * @returns Objeto JSON con las cadenas del idioma, o `{}` ante cualquier error.
  */
-export async function loadTranslations(lang: Language): Promise<Record<string, any>> {
+export async function loadTranslations(
+  lang: Language,
+): Promise<Record<string, any>> {
   // Cache hit: evitamos releer el disco en cada petición SSR.
   if (translationsCache[lang]) {
     return translationsCache[lang];
   }
 
+  // 1. Camino "build": las traducciones fueron inlineadas por Vite via
+  //    `vite.define` en la integración. Es el único camino disponible en
+  //    runtimes serverless donde `fs.readFile` falla.
+  const baked = readBakedTranslations(lang);
+  if (baked) {
+    translationsCache[lang] = baked;
+    return baked;
+  }
+
+  // 2. Camino "dev / local": leemos desde el disco (fallback histórico).
   try {
     const config = getConfig();
-    const translationsDir = path.resolve(process.cwd(), config.translationsDir as string);
-    const filePath = path.join(translationsDir, `${lang}.json`);
+    const translationsDir = path.resolve(
+      process.cwd(),
+      config.translationsDir as string,
+    );
+    const useNamespaces = config.namespaces?.enabled === true;
 
-    let fileContent: string;
+    let translations: Record<string, any> | null = null;
 
-    try {
-      fileContent = await fsPromises.readFile(filePath, 'utf-8');
-    } catch (error: unknown) {
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'code' in error &&
-        (error as { code?: string }).code === 'ENOENT'
-      ) {
-        console.warn(`[i18n] No se encontró archivo de traducciones para el idioma "${lang}" en: ${filePath}`);
-        return {};
-      }
-
-      throw error;
+    if (useNamespaces) {
+      translations = await loadNamespacedTranslations(translationsDir, lang);
     }
 
-    const translations = JSON.parse(fileContent) as Record<string, any>;
+    translations ??= await loadLegacyTranslationFile(translationsDir, lang);
+
+    const resolvedTranslations = translations ?? {};
 
     // Guardamos en caché antes de retornar para que llamadas subsiguientes
     // en la misma instancia de servidor no accedan al disco de nuevo.
-    translationsCache[lang] = translations;
+    translationsCache[lang] = resolvedTranslations;
 
-    return translations;
+    return resolvedTranslations;
   } catch (error) {
     console.error(`[i18n] Error al cargar traducciones para "${lang}":`, error);
     return {};
@@ -84,53 +152,99 @@ export async function loadTranslations(lang: Language): Promise<Record<string, a
 }
 
 /**
- * Obtiene una única cadena de traducción resolviendo una clave en notación de puntos.
+ * Obtiene una única cadena de traducción resolviendo una clave en notación de puntos,
+ * o con namespace (`common:home.title`) cuando esa funcionalidad está activa.
  *
  * @param key - Clave de traducción en notación de puntos (ej. `"home.title"`).
  * @param lang - Idioma en que se busca la cadena.
  * @returns La cadena traducida, o el resultado de la estrategia de clave faltante.
  */
-export async function getTranslation(key: string, lang: Language): Promise<string> {
+export async function getTranslation(
+  key: string,
+  lang: Language,
+): Promise<string> {
+  const config = getConfig();
+  const normalizedKey = normalizeTranslationKey(key, config);
   const translations = await loadTranslations(lang);
-  const keys = key.split('.');
-
-  // Traversal iterativo del objeto anidado usando cada segmento de la clave.
-  let result: any = translations;
-  for (const part of keys) {
-    if (!result || typeof result !== 'object') {
-      return handleMissingTranslation(key, lang);
-    }
-    result = result[part];
-  }
+  const result = resolveTranslationValue(translations, normalizedKey, config);
 
   if (typeof result === 'string') {
     return result;
   }
 
   // La clave existe pero apunta a un objeto, no a una cadena hoja.
-  return handleMissingTranslation(key, lang);
+  return handleMissingTranslation(normalizedKey, lang, new Set([lang]), key);
+}
+
+/**
+ * Obtiene una traducción sin aplicar estrategia de clave faltante.
+ *
+ * Se usa principalmente para intentar variantes (ej. plural) y, si no se encuentra
+ * una cadena, delegar en otra clave sin contaminar el resultado con fallbacks.
+ *
+ * @param key - Clave de traducción a resolver.
+ * @param lang - Idioma en que se busca la cadena.
+ * @returns La cadena traducida, o `null` si no existe.
+ */
+export async function getTranslationValue(
+  key: string,
+  lang: Language,
+): Promise<string | null> {
+  const config = getConfig();
+  const normalizedKey = normalizeTranslationKey(key, config);
+  const translations = await loadTranslations(lang);
+  const result = resolveTranslationValue(translations, normalizedKey, config);
+
+  return typeof result === 'string' ? result : null;
 }
 
 /**
  * Maneja el caso de una clave de traducción no encontrada según la estrategia configurada.
  *
- * @param key - Clave que no se encontró.
+ * @param key - Clave ya normalizada que no se encontró.
  * @param lang - Idioma en que se buscó.
+ * @param displayKey - Clave original para mostrar en UI/errores.
  * @returns Valor de sustitución según `missingKeyStrategy`.
  */
-async function handleMissingTranslation(key: string, lang: Language): Promise<string> {
+async function handleMissingTranslation(
+  key: string,
+  lang: Language,
+  visited: Set<Language>,
+  displayKey: string = key,
+): Promise<string> {
   const config = getConfig();
+
+  const fallbackLang = config.fallback?.[lang];
+
+  if (fallbackLang && !visited.has(fallbackLang)) {
+    const fallbackTranslations = await loadTranslations(fallbackLang);
+    const fallbackResult = resolveTranslationValue(
+      fallbackTranslations,
+      key,
+      config,
+    );
+
+    if (typeof fallbackResult === 'string') {
+      return fallbackResult;
+    }
+
+    const nextVisited = new Set(visited);
+    nextVisited.add(fallbackLang);
+    return handleMissingTranslation(key, fallbackLang, nextVisited, displayKey);
+  }
 
   switch (config.missingKeyStrategy) {
     case 'empty':
       return '';
     case 'error':
-      console.error(`[i18n] Clave de traducción faltante: "${key}" en idioma "${lang}"`);
-      return `[MISSING: ${key}]`;
+      console.error(
+        `[i18n] Clave de traducción faltante: "${displayKey}" en idioma "${lang}"`,
+      );
+      return `[MISSING: ${displayKey}]`;
     case 'key':
     default:
       // Estrategia más segura para UI: mostrar la clave en vez de romper el render.
-      return key;
+      return displayKey;
   }
 }
 
@@ -141,6 +255,315 @@ async function handleMissingTranslation(key: string, lang: Language): Promise<st
  */
 export function clearTranslationsCache(): void {
   Object.keys(translationsCache).forEach((key) => {
-    delete translationsCache[key];
+    Reflect.deleteProperty(translationsCache, key);
   });
+}
+
+/**
+ * Normaliza una clave aplicando el namespace por defecto cuando corresponde.
+ *
+ * @param key - Clave de traduccion original.
+ * @param config - Configuracion i18n normalizada.
+ * @returns Clave lista para resolucion.
+ */
+function normalizeTranslationKey(
+  key: string,
+  config: ReturnType<typeof getConfig>,
+): string {
+  const namespaceConfig = config.namespaces;
+
+  if (!namespaceConfig?.enabled) {
+    return key;
+  }
+
+  const separator = namespaceConfig.separator ?? ':';
+
+  if (key.includes(separator)) {
+    return key;
+  }
+
+  const defaultNamespace = namespaceConfig.defaultNamespace ?? 'common';
+  return `${defaultNamespace}${separator}${key}`;
+}
+
+/**
+ * Resuelve una clave (posiblemente namespaced) dentro del bundle cargado.
+ *
+ * @param translations - Bundle de traducciones del idioma.
+ * @param key - Clave ya normalizada.
+ * @param config - Configuracion i18n normalizada.
+ * @returns Valor resuelto o `undefined`.
+ */
+function resolveTranslationValue(
+  translations: Record<string, any>,
+  key: string,
+  config: ReturnType<typeof getConfig>,
+): unknown {
+  const namespaceConfig = config.namespaces;
+
+  if (!namespaceConfig?.enabled) {
+    return resolveNestedKey(translations, key);
+  }
+
+  const separator = namespaceConfig.separator ?? ':';
+  const defaultNamespace = namespaceConfig.defaultNamespace ?? 'common';
+  const { namespace, key: namespacedKey } = splitNamespacedKey(
+    key,
+    separator,
+    defaultNamespace,
+  );
+
+  if (isNamespacedBundle(translations)) {
+    const namespaceTranslations = translations[namespace];
+
+    if (!namespaceTranslations || typeof namespaceTranslations !== 'object') {
+      return undefined;
+    }
+
+    return resolveNestedKey(
+      namespaceTranslations as Record<string, any>,
+      namespacedKey,
+    );
+  }
+
+  // Bundle legacy: ignora el namespace y usa la clave plana.
+  return resolveNestedKey(translations, namespacedKey);
+}
+
+/**
+ * Separa una clave en namespace y subclave.
+ *
+ * @param key - Clave completa.
+ * @param separator - Separador entre namespace y clave.
+ * @param defaultNamespace - Namespace por defecto.
+ * @returns Namespace y clave sin prefijo.
+ */
+function splitNamespacedKey(
+  key: string,
+  separator: string,
+  defaultNamespace: string,
+) {
+  if (key.includes(separator)) {
+    const [namespace, ...rest] = key.split(separator);
+    return { namespace, key: rest.join(separator) };
+  }
+
+  return { namespace: defaultNamespace, key };
+}
+
+/**
+ * Detecta si el bundle tiene namespaces en el primer nivel.
+ *
+ * @param translations - Bundle de traducciones.
+ * @returns `true` si el bundle parece namespaced.
+ */
+function isNamespacedBundle(translations: Record<string, any>): boolean {
+  const values = Object.values(translations || {});
+  return (
+    values.length > 0 &&
+    values.every((value) => typeof value === 'object' && value !== null)
+  );
+}
+
+/**
+ * Carga traducciones por namespace desde `translationsDir/<lang>`.
+ *
+ * @param translationsDir - Directorio base de traducciones.
+ * @param lang - Idioma a cargar.
+ * @returns Bundle por namespace, `null` si no existe el directorio.
+ */
+async function loadNamespacedTranslations(
+  translationsDir: string,
+  lang: Language,
+): Promise<Record<string, any> | null> {
+  const langDir = path.join(translationsDir, lang);
+
+  let entries: Dirent[];
+
+  try {
+    entries = await fsPromises.readdir(langDir, { withFileTypes: true });
+  } catch (error: unknown) {
+    const errorCode = getErrorCode(error);
+
+    if (errorCode === 'ENOENT' || errorCode === 'ENOTDIR') {
+      return null;
+    }
+
+    console.error(
+      `[i18n] Error al leer el directorio de namespaces para "${lang}":`,
+      error,
+    );
+    return {};
+  }
+
+  const namespaceFiles = entries.filter(
+    (entry) => entry.isFile() && entry.name.endsWith('.json'),
+  );
+
+  if (namespaceFiles.length === 0) {
+    console.warn(
+      `[i18n] No se encontraron namespaces JSON para el idioma "${lang}" en: ${langDir}`,
+    );
+    return null;
+  }
+
+  const namespaceBundle: Record<string, any> = {};
+
+  for (const entry of namespaceFiles) {
+    const namespace = path.basename(entry.name, '.json');
+    const filePath = path.join(langDir, entry.name);
+    const namespaceTranslations = await readJsonFile(
+      filePath,
+      lang,
+      `namespace "${namespace}"`,
+      false,
+    );
+
+    if (namespaceTranslations) {
+      namespaceBundle[namespace] = namespaceTranslations;
+    }
+  }
+
+  return namespaceBundle;
+}
+
+/**
+ * Carga el archivo legacy `<lang>.json`.
+ *
+ * @param translationsDir - Directorio base de traducciones.
+ * @param lang - Idioma a cargar.
+ * @returns Objeto de traducciones legacy.
+ */
+async function loadLegacyTranslationFile(
+  translationsDir: string,
+  lang: Language,
+): Promise<Record<string, any>> {
+  const filePath = path.join(translationsDir, `${lang}.json`);
+  const translations = await readJsonFile(
+    filePath,
+    lang,
+    'archivo de traducciones',
+    true,
+  );
+
+  return translations ?? {};
+}
+
+/**
+ * Lee y parsea un archivo JSON con manejo de errores controlado.
+ *
+ * @param filePath - Ruta absoluta del archivo.
+ * @param lang - Idioma asociado.
+ * @param label - Etiqueta para logs.
+ * @param warnOnMissing - Si `true`, loguea warning cuando no existe.
+ * @returns JSON parseado o `null` si no existe.
+ */
+async function readJsonFile(
+  filePath: string,
+  lang: Language,
+  label: string,
+  warnOnMissing: boolean,
+): Promise<Record<string, any> | null> {
+  try {
+    const fileContent = await fsPromises.readFile(filePath, 'utf-8');
+    return JSON.parse(fileContent) as Record<string, any>;
+  } catch (error: unknown) {
+    const errorCode = getErrorCode(error);
+
+    if (errorCode === 'ENOENT') {
+      if (warnOnMissing) {
+        console.warn(
+          `[i18n] No se encontró ${label} para el idioma "${lang}" en: ${filePath}`,
+        );
+      }
+
+      return null;
+    }
+
+    console.error(`[i18n] Error al cargar ${label} para "${lang}":`, error);
+    return null;
+  }
+}
+
+/**
+ * Extrae el codigo de error de un error Node.js.
+ *
+ * @param error - Error capturado.
+ * @returns Codigo de error o `undefined`.
+ */
+function getErrorCode(error: unknown): string | undefined {
+  if (typeof error === 'object' && error !== null && 'code' in error) {
+    return (error as { code?: string }).code;
+  }
+
+  return undefined;
+}
+
+/**
+ * Carga **todas** las traducciones de todos los idiomas soportados y las
+ * devuelve como un unico mapa `{ [lang]: traducciones }`.
+ *
+ * Usado exclusivamente por la integracion (`integration.ts`) en el hook
+ * `astro:config:setup` para inlinear las traducciones via `vite.define`
+ * y evitar lecturas de disco en runtimes serverless.
+ *
+ * Reutiliza las mismas funciones internas de lectura que {@link loadTranslations}
+ * pero itera sobre todos los `supportedLangs` en paralelo.
+ *
+ * @returns Mapa de idioma a traducciones. Vacio si no se pudo leer ningun archivo.
+ */
+export async function bundleAllTranslations(): Promise<
+  Record<Language, Record<string, any>>
+> {
+  const config = getConfig();
+  const translationsDir = path.resolve(
+    process.cwd(),
+    config.translationsDir as string,
+  );
+  const useNamespaces = config.namespaces?.enabled === true;
+  const supportedLangs = config.supportedLangs ?? [];
+
+  const result: Record<Language, Record<string, any>> = {};
+
+  for (const lang of supportedLangs) {
+    try {
+      let translations: Record<string, any> | null = null;
+
+      if (useNamespaces) {
+        translations = await loadNamespacedTranslations(translationsDir, lang);
+      }
+
+      translations ??= await loadLegacyTranslationFile(translationsDir, lang);
+
+      if (translations && Object.keys(translations).length > 0) {
+        result[lang] = translations;
+      }
+    } catch {
+      // Si falla la carga de un idioma, continuamos con el siguiente.
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Resuelve una clave en notacion de puntos sobre un objeto anidado.
+ *
+ * @param source - Objeto de traducciones.
+ * @param key - Clave en notacion de puntos.
+ * @returns Valor resuelto o `undefined`.
+ */
+function resolveNestedKey(source: Record<string, any>, key: string): unknown {
+  const keys = key.split('.');
+
+  let result: any = source;
+  for (const part of keys) {
+    if (!result || typeof result !== 'object') {
+      return undefined;
+    }
+
+    result = result[part];
+  }
+
+  return result;
 }

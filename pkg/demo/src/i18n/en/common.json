@@ -1,0 +1,73 @@
+{
+  "environment": "Demo",
+  "layout": {
+    "titleSuffix": "| astro-plugin-i18n demo"
+  },
+  "nav": {
+    "brand": "astro-plugin-i18n",
+    "home": "Home",
+    "features": "Features",
+    "demo": "Interactive demo",
+    "frameworks": "Frameworks",
+    "changeLanguage": "Change language"
+  },
+  "footer": {
+    "madeWith": "Official npm package demo",
+    "copyright": "© {year} MIT · No warranties"
+  },
+  "greeting": "Hello {name}, you have {count} pending messages.",
+  "notifications": {
+    "count_zero": "No notifications",
+    "count_one": "You have {count} notification",
+    "count_other": "You have {count} notifications"
+  },
+  "sections": {
+    "server": {
+      "title": "Consistent SSR",
+      "body": "I18nText resolves translations on the server and keeps initial HTML stable."
+    },
+    "variables": {
+      "title": "Typed interpolation",
+      "body": "Insert dynamic variables safely in Astro and React components."
+    }
+  },
+  "controls": {
+    "title": "Client language switching",
+    "body": "Buttons update data-i18n nodes and React islands without a full reload.",
+    "clientStatus": "client cache ready"
+  },
+  "routing": {
+    "title": "i18n routing",
+    "body": "Localized links with prefix-except-default: default locale has no prefix; others are prefixed.",
+    "currentPath": "Current route: {path}",
+    "linkHome": "Home (this locale)",
+    "linkEnglish": "Home in English",
+    "linkBrazil": "Home in pt-BR"
+  },
+  "demo": {
+    "meta": {
+      "pageTitle": "Interactive demo",
+      "description": "React islands, plural rules, live interpolation and LangToggle."
+    },
+    "sections": {
+      "interpolation": {
+        "title": "Dynamic interpolation",
+        "body": "Edit name and count on the client."
+      },
+      "plural": {
+        "title": "Pluralization",
+        "body": "Uses count_zero / count_one / count_other with Intl.PluralRules."
+      }
+    },
+    "react": {
+      "title": "React island",
+      "description": "LangToggle, TranslatedText, useTranslation, setupLanguageObserver and the global client API.",
+      "hookTitle": "Reactive hook state",
+      "globalTitle": "Global client API",
+      "currentLanguage": "Language from hook: {lang}",
+      "observedLanguage": "Language from observer: {lang}",
+      "eventCount": "Observed changes: {count}",
+      "forcedPreview": "Preview in {lang} with tGlobal()"
+    }
+  }
+}

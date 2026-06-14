@@ -1,0 +1,35 @@
+{
+  "meta": {
+    "pageTitle": "astro-plugin-i18n demo",
+    "description": "Multilingual landing: SSR, namespaces, lazy loading and locale-aware routes."
+  },
+  "hero": {
+    "declarativeHint": "This paragraph uses data-i18n-key and updates when you switch language.",
+    "title": "Internationalization for Astro, without friction",
+    "subtitle": "Drop-in {product}: SSR-first builds, optional typings and per-language bundles."
+  },
+  "cards": {
+    "routing": {
+      "title": "Integrated routing",
+      "body": "Optional prefix, redirects and i18n-lang cookie for the next visit."
+    },
+    "lazy": {
+      "title": "Lazy loading",
+      "body": "Smaller initial payload; the client fetches /i18n/{lang}.json when needed."
+    },
+    "dx": {
+      "title": "Developer experience",
+      "body": "generateTypes, auditOnBuild, JSON HMR in dev and schema for astro add."
+    },
+    "islands": {
+      "title": "React islands",
+      "body": "useTranslation and LangToggle while React stays decoupled from the core."
+    }
+  },
+  "tryIt": {
+    "title": "Try it",
+    "body": "Open the interactive demo for plural rules, interpolation and instant language switches.",
+    "ctaDemo": "Open demo",
+    "ctaFeatures": "Feature list"
+  }
+}

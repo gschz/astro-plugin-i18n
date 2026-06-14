@@ -2,9 +2,13 @@ dist
 node_modules
 bun.lock
 
-demo/.astro
-demo/dist
-demo/node_modules
-
-src/types/i18n-types.d.ts
-demo/src/types/i18n-types.d.ts
+pkg/demo/.astro
+pkg/demo/.vercel
+pkg/demo/.netlify
+pkg/demo/dist
+pkg/demo/node_modules
+pkg/demo/src/types/i18n-types.d.ts
+pkg/template/.astro
+pkg/template/dist
+pkg/template/node_modules
+pkg/template/src/types/i18n-types.d.ts

@@ -1,0 +1,50 @@
+{
+  "meta": {
+    "pageTitle": "Recursos do plugin",
+    "description": "O que o @gschz/astro-plugin-i18n cobre frente ao i18n básico do Astro."
+  },
+  "title": "Recursos",
+  "intro": "SSR estável, roteamento explícito e DX previsível para projetos Astro 6+.",
+  "fallbackExample": {
+    "title": "Fallback de idioma",
+    "hint": "(A frase acima está em inglês porque a tradução em pt-BR foi omitida propositalmente)"
+  },
+  "headings": {
+    "compare": "Comparação rápida",
+    "code": "Exemplo mínimo",
+    "list": "Lista de capacidades"
+  },
+  "compare": {
+    "feature": "Área",
+    "native": "Collections Astro / manual",
+    "plugin": "@gschz/astro-plugin-i18n"
+  },
+  "rows": {
+    "routing": {
+      "feature": "Rotas por idioma",
+      "native": "Manual com getStaticPaths / middleware próprio",
+      "plugin": "Estratégias prefix / prefix-except-default + redirects"
+    },
+    "ssr": {
+      "feature": "SSR + cliente",
+      "native": "Combina várias APIs",
+      "plugin": "translateAsync + bootstrap + cache plana no cliente"
+    },
+    "bundles": {
+      "feature": "Payload",
+      "native": "Tudo no HTML ou imports estáticos",
+      "plugin": "Bundles JSON lazy opcionais em /i18n/"
+    }
+  },
+  "list": {
+    "namespaces": "Namespaces JSON por idioma",
+    "plural": "Pluralização com Intl.PluralRules",
+    "seo": "I18nHead com hreflang",
+    "declarative": "DOM declarativo data-i18n-*",
+    "audit": "auditOnBuild opcional"
+  },
+  "code": {
+    "caption": "astro.config.mjs (trecho)",
+    "snippet": "import i18n from '@gschz/astro-plugin-i18n/integration';\n\nexport default defineConfig({\n  integrations: [\n    i18n({\n      defaultLang: 'es',\n      supportedLangs: ['es', 'en', 'pt-BR'],\n      lazyLoading: { enabled: true, publicPath: '/i18n', preloadNamespaces: ['common'] },\n    }),\n  ],\n});"
+  }
+}

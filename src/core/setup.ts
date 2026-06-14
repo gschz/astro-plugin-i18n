@@ -6,11 +6,15 @@
  * configuración activa sin importar los módulos core directamente.
  */
 
-import type { Language } from '../types';
-import { getDefaultLanguage, getSupportedLanguages } from './config';
+import type { I18nPluginOptions, Language } from '../types';
+import { debugLog } from '../utils/debug';
+import { getConfig, getSupportedLanguages } from './config';
 import { getCurrentLanguage } from './language';
-import { getTranslationsForLanguage } from './translations';
-import { clearTranslationsCache } from './translations';
+import { getRoutingRedirect } from './routing';
+import {
+  clearTranslationsCache,
+  getTranslationsForLanguage,
+} from './translations';
 
 /**
  * Estructura de estado inicial para hidratar i18n en el cliente.
@@ -24,6 +28,8 @@ export interface I18nClientBootstrapPayload {
   allTranslations: Record<Language, Record<string, any>>;
   /** Lista final de idiomas usados para construir `allTranslations`. */
   supportedLangs: Language[];
+  /** Configuración efectiva del plugin para hidratar el cliente. */
+  config: ReturnType<typeof getConfig>;
 }
 
 /**
@@ -48,12 +54,13 @@ export function isLanguageSupported(lang: Language): boolean {
 }
 
 /**
- * Determina si la URL dada necesita ser redirigida para incluir el prefijo
- * de idioma por defecto cuando la ruta no comienza con un idioma soportado.
+ * Determina si la URL dada necesita ser redirigida según la configuración de
+ * routing i18n activa.
  *
- * Por ejemplo, si `defaultLang` es `"en"` y la URL es `/about`, devuelve
- * una nueva URL con la ruta `/en/about`. Si la URL ya comienza con un idioma
- * válido, devuelve `null` (no se requiere redirección).
+ * El comportamiento depende de `config.routing.strategy`:
+ * - `manual`: nunca redirige.
+ * - `prefix`: exige prefijo de idioma para todas las rutas.
+ * - `prefix-except-default`: el idioma por defecto no lleva prefijo.
  *
  * @param url - URL de la petición entrante.
  * @returns Nueva URL con el prefijo de idioma, o `null` si no se necesita redirección.
@@ -66,20 +73,7 @@ export function isLanguageSupported(lang: Language): boolean {
  * ```
  */
 export function getLanguageRedirect(url: URL): URL | null {
-  const supportedLangs = getSupportedLanguages();
-  const defaultLang = getDefaultLanguage();
-  const segments = url.pathname.split('/').filter(Boolean);
-  const langSegment = segments[0];
-
-  // Si el primer segmento no corresponde a ningún idioma soportado,
-  // redirigimos al mismo path bajo el idioma por defecto.
-  if (!langSegment || !supportedLangs.includes(langSegment)) {
-    const newUrl = new URL(url.toString());
-    newUrl.pathname = `/${defaultLang}${url.pathname}`;
-    return newUrl;
-  }
-
-  return null;
+  return getRoutingRedirect(url, getConfig());
 }
 
 /**
@@ -94,24 +88,63 @@ export function getLanguageRedirect(url: URL): URL | null {
  * @returns Payload listo para inyectarse en `window.__INITIAL_I18N_STATE__` y
  *   `window.__INITIAL_I18N_ALL_TRANSLATIONS__`.
  */
-export async function getI18nClientBootstrapPayload(locals?: Record<string, any>): Promise<I18nClientBootstrapPayload> {
+export async function getI18nClientBootstrapPayload(
+  locals?: Record<string, any>,
+  options?: { preloadNamespaces?: string[] },
+): Promise<I18nClientBootstrapPayload> {
   const lang = getCurrentLanguage(locals);
   const translations = await getTranslationsForLanguage(lang);
+  const config = getConfig();
 
-  const localsConfig = locals?.i18n?.config as { supportedLangs?: Language[] } | undefined;
-  const supportedLangs =
-    localsConfig?.supportedLangs && localsConfig.supportedLangs.length > 0 ? localsConfig.supportedLangs : [lang];
+  let initialTranslations = translations;
+  const lazyLoading = config.lazyLoading;
+  const preloadNamespaces =
+    options?.preloadNamespaces ?? lazyLoading?.preloadNamespaces;
 
-  const allTranslations = Object.fromEntries(
-    await Promise.all(
-      supportedLangs.map(async (supportedLang) => [supportedLang, await getTranslationsForLanguage(supportedLang)]),
-    ),
-  ) as Record<Language, Record<string, any>>;
+  if (
+    lazyLoading?.enabled &&
+    Array.isArray(preloadNamespaces) &&
+    preloadNamespaces.length > 0 &&
+    config.namespaces?.enabled
+  ) {
+    const filtered: Record<string, any> = {};
 
+    for (const namespace of preloadNamespaces) {
+      if (namespace in translations) {
+        filtered[namespace] = translations[namespace];
+      }
+    }
+
+    initialTranslations = filtered;
+  }
+
+  const localsConfig = locals?.i18n?.config as
+    | Partial<I18nPluginOptions>
+    | undefined;
+
+  let supportedLangs = [lang];
+  if (localsConfig?.supportedLangs && localsConfig.supportedLangs.length > 0) {
+    supportedLangs = localsConfig.supportedLangs;
+  } else if (config.supportedLangs && config.supportedLangs.length > 0) {
+    supportedLangs = config.supportedLangs;
+  }
+
+  // Debug: permite diagnosticar si el config proviene de baked options o defaults
+  debugLog(
+    `[i18n:bootstrap] lang=${lang}, ` +
+      `config.defaultLang=${config.defaultLang}, ` +
+      `config.supportedLangs=[${config.supportedLangs?.join(', ')}], ` +
+      `config.routing.strategy=${config.routing?.strategy}`,
+  );
+
+  // Con virtual module, allTranslations ya está en el bundle del cliente
+  // (populateClientCache se ejecuta al importar client.ts).
+  // Devolvemos objeto vacío por backward compat con el tipo del payload.
   return {
     lang,
-    translations,
-    allTranslations,
+    translations: initialTranslations,
+    allTranslations: {} as Record<Language, Record<string, any>>,
     supportedLangs,
+    config,
   };
 }

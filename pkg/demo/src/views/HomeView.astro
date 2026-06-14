@@ -1,0 +1,91 @@
+---
+import T from '@gschz/astro-plugin-i18n/components/I18nText.astro';
+import {
+  getLocalizedPath,
+  getCurrentLanguage,
+  getConfig,
+} from '@gschz/astro-plugin-i18n';
+
+import HeroSection from '~/components/ui/HeroSection.astro';
+import HomeFeatureCard from '~/components/ui/HomeFeatureCard.astro';
+import InteractiveDemo from '~/components/ui/react/InteractiveDemo';
+
+import type { I18nKey } from '~/types/i18n-types';
+
+import routingIcon from '~/icons/routing.svg';
+import payloadIcon from '~/icons/payload.svg';
+import toolsIcon from '~/icons/tools.svg';
+import reactIcon from '~/icons/react.svg';
+
+const lang = getCurrentLanguage(Astro.locals);
+const config = Astro.locals.i18n?.config || getConfig();
+const [featuresHref, demoHref] = [
+  getLocalizedPath('/features', lang, config),
+  getLocalizedPath('/demo', lang, config),
+];
+
+const featureCards = [
+  {
+    titleKey: 'home:cards.routing.title',
+    bodyKey: 'home:cards.routing.body',
+    icon: routingIcon,
+  },
+  {
+    titleKey: 'home:cards.lazy.title',
+    bodyKey: 'home:cards.lazy.body',
+    icon: payloadIcon,
+  },
+  {
+    titleKey: 'home:cards.dx.title',
+    bodyKey: 'home:cards.dx.body',
+    icon: toolsIcon,
+  },
+  {
+    titleKey: 'home:cards.islands.title',
+    bodyKey: 'home:cards.islands.body',
+    icon: reactIcon,
+  },
+];
+---
+
+<main
+  class="container-custom py-12 flex flex-col gap-8 min-h-[calc(100vh-12rem)]"
+>
+  <HeroSection />
+
+  <section class="grid gap-6 md:grid-cols-2">
+    {
+      featureCards.map((card) => (
+        <HomeFeatureCard
+          titleKey={card.titleKey as I18nKey}
+          bodyKey={card.bodyKey as I18nKey}
+          icon={card.icon}
+        />
+      ))
+    }
+  </section>
+
+  <section class="glass-card p-6 sm:p-8">
+    <T
+      key="home:tryIt.title"
+      element="h2"
+      class="text-2xl font-bold tracking-tight text-slate-900"
+    />
+    <T
+      key="home:tryIt.body"
+      element="p"
+      class="mt-3 max-w-3xl text-sm leading-relaxed text-slate-500 sm:text-base"
+    />
+    <div class="mt-6 flex flex-wrap gap-3">
+      <a class="btn-primary" href={demoHref}>
+        <T key="home:tryIt.ctaDemo" />
+      </a>
+      <a class="btn-secondary" href={featuresHref}>
+        <T key="home:tryIt.ctaFeatures" />
+      </a>
+    </div>
+    <div class="mt-8">
+      <InteractiveDemo client:only="react" />
+    </div>
+  </section>
+</main>
