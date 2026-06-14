@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@astrojs/vercel": "10.0.8",
-    "@gschz/astro-plugin-i18n": "1.4.10-rc.1",
+    "@gschz/astro-plugin-i18n": "2.0.0",
     "astro": "6.4.4",
     "react": "19.2.7",
     "react-dom": "19.2.7",
