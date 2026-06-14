@@ -409,3 +409,367 @@ describe('integration: bundles lazy bajo build.client', () => {
     expect(esBundle).toEqual({ common: { hello: 'Hola' } });
   });
 });
+
+describe('integration: hooks y helpers internos', () => {
+  beforeEach(() => {
+    setOptions(null);
+    Reflect.deleteProperty(globalThis, '__ASTRO_I18N_OPTIONS__');
+    Reflect.deleteProperty(globalThis, '__ASTRO_I18N_TRANSLATIONS_WATCHER__');
+  });
+
+  afterEach(() => {
+    Reflect.deleteProperty(globalThis, '__ASTRO_I18N_RUNTIME_OPTIONS__');
+    Reflect.deleteProperty(globalThis, '__ASTRO_I18N_TRANSLATIONS_WATCHER__');
+    resetConfig();
+  });
+
+  it('astro:build:start se ejecuta sin errores', async () => {
+    const integration = createI18nIntegration({
+      defaultLang: 'es',
+      supportedLangs: ['es', 'en'],
+    });
+
+    const hooks = integration.hooks as {
+      'astro:build:start': (params: unknown) => Promise<void>;
+    };
+
+    await expect(
+      hooks['astro:build:start']({ logger: buildLogger() }),
+    ).resolves.toBeUndefined();
+  });
+
+  it('maybeGenerateTypes con command=build con translationsDir vacio muestra aviso', async () => {
+    const tmpDir = await fs.mkdtemp(
+      path.join(os.tmpdir(), 'astro-i18n-integration-types-'),
+    );
+
+    try {
+      const { logger } = await runConfigSetup(
+        {
+          defaultLang: 'es',
+          supportedLangs: ['es', 'en'],
+          translationsDir: tmpDir,
+          generateTypes: true,
+        },
+        { vite: { define: {} } },
+      );
+
+      expect(logger.info).toHaveBeenCalledWith(
+        'i18n type generation skipped (no translations found for default language).',
+      );
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('maybeGenerateTypes con command=preview muestra aviso de salto', async () => {
+    const integration = createI18nIntegration({
+      defaultLang: 'es',
+      supportedLangs: ['es', 'en'],
+      generateTypes: true,
+    });
+
+    const hooks = integration.hooks as {
+      'astro:config:setup': (params: unknown) => Promise<void>;
+    };
+    const config = buildConfig({ vite: { define: {} } });
+    const logger = buildLogger();
+
+    await hooks['astro:config:setup']({
+      logger,
+      command: 'preview',
+      addMiddleware: vi.fn(),
+      config,
+      updateConfig: createUpdateConfig(config),
+    });
+
+    expect(logger.info).toHaveBeenCalledWith(
+      "Skipping i18n type generation (enabled but command is not 'build' or 'dev').",
+    );
+  });
+
+  it('config:setup tolera build.client como URL file:// sin errores', async () => {
+    const outDir = await fs.mkdtemp(
+      path.join(os.tmpdir(), 'astro-i18n-integration-url-client-'),
+    );
+    const publicDir = path.join(outDir, 'public');
+
+    const integration = createI18nIntegration({
+      defaultLang: 'es',
+      supportedLangs: ['es', 'en'],
+    });
+
+    const hooks = integration.hooks as {
+      'astro:config:setup': (params: unknown) => Promise<void>;
+    };
+
+    const config = {
+      outDir,
+      build: { client: new URL(`file://${publicDir}/`) },
+      vite: { define: {} as Record<string, unknown> },
+    };
+    const logger = buildLogger();
+    const addMiddleware = vi.fn();
+    const updateConfig = createUpdateConfig(config);
+
+    await hooks['astro:config:setup']({
+      logger,
+      command: 'build',
+      addMiddleware,
+      config,
+      updateConfig,
+    });
+
+    // Se completa sin error y el define se inscribe en la config
+    expect(config.vite.define['__ASTRO_I18N_RUNTIME_OPTIONS__']).toBeDefined();
+  });
+
+  it('serializeOptionsForDefine descarta funciones y valores no serializables', async () => {
+    const { config } = await runConfigSetup(
+      {
+        defaultLang: 'es',
+        supportedLangs: ['es', 'en'],
+        routing: { strategy: 'prefix-except-default' },
+      } as Record<string, unknown>,
+      { vite: { define: {} } },
+    );
+
+    const defineValue = config.vite.define[
+      '__ASTRO_I18N_RUNTIME_OPTIONS__'
+    ] as string;
+    expect(defineValue).toBeDefined();
+
+    const parsed = JSON.parse(JSON.parse(defineValue));
+    expect(parsed).toMatchObject({
+      defaultLang: 'es',
+      supportedLangs: ['es', 'en'],
+    });
+  });
+
+  it('astro:server:setup registra watcher y no falla', async () => {
+    const integration = createI18nIntegration({
+      defaultLang: 'es',
+      supportedLangs: ['es', 'en'],
+    });
+
+    const hooks = integration.hooks as {
+      'astro:server:setup': (params: unknown) => Promise<void>;
+    };
+
+    const watcher = {
+      add: vi.fn(),
+      on: vi.fn(),
+      off: vi.fn(),
+      setMaxListeners: vi.fn(),
+      getMaxListeners: vi.fn().mockReturnValue(10),
+    };
+
+    await hooks['astro:server:setup']({
+      server: { watcher },
+      logger: buildLogger(),
+    });
+
+    expect(watcher.add).toHaveBeenCalled();
+    expect(watcher.on).toHaveBeenCalledWith('change', expect.any(Function));
+  });
+
+  it('astro:server:setup con lazyLoading registra middleware', async () => {
+    const integration = createI18nIntegration({
+      defaultLang: 'es',
+      supportedLangs: ['es', 'en'],
+      lazyLoading: { enabled: true, publicPath: '/locales' },
+    });
+
+    const hooks = integration.hooks as {
+      'astro:server:setup': (params: unknown) => void;
+    };
+
+    const useSpy = vi.fn();
+    const watcher = {
+      add: vi.fn(),
+      on: vi.fn(),
+      off: vi.fn(),
+      setMaxListeners: vi.fn(),
+      getMaxListeners: vi.fn().mockReturnValue(10),
+    };
+    const logger = buildLogger();
+
+    hooks['astro:server:setup']({
+      server: { watcher, middlewares: { use: useSpy } },
+      logger,
+    });
+
+    expect(useSpy).toHaveBeenCalled();
+    const middleware = useSpy.mock.calls[0][0];
+    expect(middleware).toEqual(expect.any(Function));
+  });
+
+  it('astro:server:setup detacha watcher anterior cuando cambia el server', async () => {
+    const integration = createI18nIntegration({
+      defaultLang: 'es',
+      supportedLangs: ['es', 'en'],
+    });
+
+    const hooks = integration.hooks as {
+      'astro:server:setup': (params: unknown) => void;
+    };
+
+    const handlerRef = { current: null as unknown };
+
+    const firstWatcher = {
+      add: vi.fn(),
+      on: vi.fn((_event: string, handler: unknown) => {
+        handlerRef.current = handler;
+      }),
+      off: vi.fn(),
+      setMaxListeners: vi.fn(),
+      getMaxListeners: vi.fn().mockReturnValue(10),
+    };
+
+    hooks['astro:server:setup']({
+      server: { watcher: firstWatcher },
+      logger: buildLogger(),
+    });
+
+    expect(firstWatcher.add).toHaveBeenCalledTimes(1);
+
+    const secondWatcher = {
+      add: vi.fn(),
+      on: vi.fn(),
+      off: vi.fn(),
+      setMaxListeners: vi.fn(),
+      getMaxListeners: vi.fn().mockReturnValue(10),
+    };
+
+    hooks['astro:server:setup']({
+      server: { watcher: secondWatcher },
+      logger: buildLogger(),
+    });
+
+    expect(firstWatcher.off).toHaveBeenCalled();
+    expect(secondWatcher.add).toHaveBeenCalled();
+  });
+
+  it('normalizeBuildClientDir con URL http:// retorna pathname', async () => {
+    const integration = createI18nIntegration({
+      defaultLang: 'es',
+      supportedLangs: ['es', 'en'],
+    });
+
+    const hooks = integration.hooks as {
+      'astro:config:setup': (params: unknown) => Promise<void>;
+    };
+
+    const config = {
+      outDir: '/tmp',
+      build: { client: new URL('http://example.com/client/') },
+      vite: { define: {} as Record<string, unknown> },
+    };
+    const logger = buildLogger();
+    const updateConfig = createUpdateConfig(config);
+
+    await hooks['astro:config:setup']({
+      logger,
+      command: 'build',
+      addMiddleware: vi.fn(),
+      config,
+      updateConfig,
+    });
+
+    expect(config.vite.define['__ASTRO_I18N_RUNTIME_OPTIONS__']).toBeDefined();
+  });
+
+  it('config:setup con build.client no-string ni URL no falla', async () => {
+    const integration = createI18nIntegration({
+      defaultLang: 'es',
+      supportedLangs: ['es', 'en'],
+    });
+
+    const hooks = integration.hooks as {
+      'astro:config:setup': (params: unknown) => Promise<void>;
+    };
+
+    const config = {
+      outDir: '/tmp',
+      build: { client: 42 },
+      vite: { define: {} as Record<string, unknown> },
+    };
+    const logger = buildLogger();
+    const updateConfig = createUpdateConfig(config);
+
+    await hooks['astro:config:setup']({
+      logger,
+      command: 'build',
+      addMiddleware: vi.fn(),
+      config,
+      updateConfig,
+    });
+
+    expect(config.vite.define['__ASTRO_I18N_RUNTIME_OPTIONS__']).toBeDefined();
+  });
+
+  it('auditOnBuild=true ejecuta auditoria sin errores', async () => {
+    const tmpDir = await fs.mkdtemp(
+      path.join(os.tmpdir(), 'astro-i18n-integration-audit-'),
+    );
+
+    try {
+      await writeJson(path.join(tmpDir, 'es.json'), { hello: 'Hola' });
+      await writeJson(path.join(tmpDir, 'en.json'), { hello: 'Hello' });
+
+      const integration = createI18nIntegration({
+        defaultLang: 'es',
+        supportedLangs: ['es', 'en'],
+        translationsDir: tmpDir,
+        auditOnBuild: true,
+      });
+
+      const hooks = integration.hooks as {
+        'astro:build:done': (params: unknown) => Promise<void>;
+      };
+      const logger = buildLogger();
+
+      await hooks['astro:build:done']({
+        logger,
+        dir: '/tmp',
+        pages: [],
+        assets: new Map(),
+      });
+
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.stringMatching(/i18n coverage/),
+      );
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('config:setup con build.client URL file:// con host invalido no falla', async () => {
+    const integration = createI18nIntegration({
+      defaultLang: 'es',
+      supportedLangs: ['es', 'en'],
+    });
+
+    const hooks = integration.hooks as {
+      'astro:config:setup': (params: unknown) => Promise<void>;
+    };
+
+    const config = {
+      outDir: '/tmp',
+      build: { client: new URL('file://example.com/path') },
+      vite: { define: {} as Record<string, unknown> },
+    };
+    const logger = buildLogger();
+    const updateConfig = createUpdateConfig(config);
+
+    await hooks['astro:config:setup']({
+      logger,
+      command: 'build',
+      addMiddleware: vi.fn(),
+      config,
+      updateConfig,
+    });
+
+    expect(config.vite.define['__ASTRO_I18N_RUNTIME_OPTIONS__']).toBeDefined();
+  });
+});

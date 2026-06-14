@@ -80,7 +80,7 @@ describe('config core', () => {
     const config = getConfig();
     expect(config.defaultLang).toBe('pt-BR');
     expect(config.supportedLangs).toEqual(['pt-BR', 'en']);
-    expect(config.routing!.strategy).toBe('prefix-except-default');
+    expect(config.routing?.strategy).toBe('prefix-except-default');
 
     // cleanup
     delete globalThis.__ASTRO_I18N_RUNTIME_OPTIONS__;

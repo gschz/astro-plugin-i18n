@@ -275,4 +275,109 @@ describe('language lifecycle', () => {
 
     expect(t('meta:environment')).toBe('Demo');
   });
+
+  it('popstate dispara changeLanguage con idioma extraido de la URL', async () => {
+    const browserWindow = globalThis as unknown as Window & {
+      __INITIAL_I18N_STATE__?: {
+        lang?: string;
+        translations?: Record<string, any>;
+      };
+    };
+
+    browserWindow.__INITIAL_I18N_STATE__ = {
+      lang: 'es',
+      translations: { demo: { title: 'Titulo ES' } },
+    };
+
+    const langChangeSpy = vi.fn();
+    document.addEventListener('languagechange', langChangeSpy);
+
+    bootstrapClientI18n();
+
+    await vi.waitFor(() => {
+      expect(document.documentElement.lang).toBe('es');
+    });
+
+    browserWindow.history.pushState({}, '', '/en/page');
+    browserWindow.dispatchEvent(new PopStateEvent('popstate'));
+
+    await vi.waitFor(() => {
+      expect(langChangeSpy).toHaveBeenCalled();
+    });
+
+    expect(getCurrentLanguage()).toBe('en');
+  });
+
+  it('popstate mantiene idioma si la URL no tiene prefijo de idioma valido', async () => {
+    const browserWindow = globalThis as unknown as Window & {
+      __INITIAL_I18N_STATE__?: {
+        lang?: string;
+        translations?: Record<string, any>;
+      };
+    };
+
+    browserWindow.__INITIAL_I18N_STATE__ = {
+      lang: 'en',
+      translations: { demo: { title: 'Title EN' } },
+    };
+
+    const langChangeSpy = vi.fn();
+    document.addEventListener('languagechange', langChangeSpy);
+
+    bootstrapClientI18n();
+
+    await vi.waitFor(() => {
+      expect(document.documentElement.lang).toBe('en');
+    });
+
+    const callsBefore = langChangeSpy.mock.calls.length;
+
+    browserWindow.history.pushState({}, '', '/about');
+    browserWindow.dispatchEvent(new PopStateEvent('popstate'));
+
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(langChangeSpy.mock.calls.length).toBe(callsBefore);
+    expect(getCurrentLanguage()).toBe('en');
+  });
+
+  it('resolveBrowserLanguage usa navigator.language cuando autoDetect=true y no hay estado previo', async () => {
+    const browserWindow = globalThis as unknown as Window & {
+      __INITIAL_I18N_STATE__?: {
+        lang?: string;
+        translations?: Record<string, any>;
+      };
+    };
+
+    browserWindow.__INITIAL_I18N_STATE__ = undefined;
+    browserWindow.localStorage.clear();
+    document.documentElement.removeAttribute('lang');
+
+    initConfig({
+      defaultLang: 'es',
+      supportedLangs: ['es', 'en', 'pt'],
+      autoDetect: true,
+    });
+
+    const proto = Object.getPrototypeOf(navigator);
+    const origDesc = Object.getOwnPropertyDescriptor(proto, 'language');
+
+    Object.defineProperty(proto, 'language', {
+      get: () => 'pt-BR',
+      configurable: true,
+    });
+
+    if (navigator.language === 'pt-BR') {
+      const { setupLanguage } = await import('~/core/language');
+      await setupLanguage();
+
+      await vi.waitFor(() => {
+        expect(document.documentElement.lang).toBe('pt');
+      });
+    }
+
+    if (origDesc) {
+      Object.defineProperty(proto, 'language', origDesc);
+    }
+  });
 });

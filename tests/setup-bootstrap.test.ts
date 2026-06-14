@@ -54,7 +54,7 @@ describe('setup bootstrap payload', () => {
     // Verifica que el config en el payload refleje la config real, no defaults
     expect(payload.config.defaultLang).toBe('es');
     expect(payload.config.supportedLangs).toEqual(['es', 'en']);
-    expect(payload.config.routing!.strategy).toBe('prefix-except-default');
+    expect(payload.config.routing?.strategy).toBe('prefix-except-default');
     expect(payload.config.missingKeyStrategy).toBe('key');
   });
 

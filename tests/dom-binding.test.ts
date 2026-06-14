@@ -119,4 +119,34 @@ describe('bindDataI18n', () => {
 
     cleanup();
   });
+
+  it('ignora elementos con data-i18n-key vacio', () => {
+    document.body.innerHTML = [
+      '<h1 id="empty-key" data-i18n-key=""></h1>',
+      '<h1 id="valid" data-i18n-key="demo.title"></h1>',
+    ].join('\n');
+
+    bindDataI18n();
+
+    expect(document.getElementById('empty-key')?.textContent).toBe('');
+    expect(document.getElementById('valid')?.textContent).toBe('Hola');
+  });
+
+  it('ignora elementos con clave no traducida en lugar de mostrar la clave', () => {
+    document.body.innerHTML =
+      '<h1 id="missing" data-i18n-key="demo.nonexistent"></h1>';
+
+    bindDataI18n();
+
+    expect(document.getElementById('missing')?.textContent).toBe('');
+  });
+
+  it('valores JSON invalidos en data-i18n-values no rompen el render', () => {
+    document.body.innerHTML =
+      '<h1 id="bad-json" data-i18n-key="demo.title" data-i18n-values="not-json"></h1>';
+
+    bindDataI18n();
+
+    expect(document.getElementById('bad-json')?.textContent).toBe('Hola');
+  });
 });

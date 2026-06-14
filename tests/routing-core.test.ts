@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   getPathLanguage,
   getRoutingRedirect,
+  matchSupportedLanguage,
   normalizeRoutingOptions,
   resolveDefaultLanguage,
   resolveSupportedLanguages,
@@ -80,6 +81,57 @@ describe('routing core', () => {
         strategy: 'manual',
       },
     });
+
+    expect(redirect).toBeNull();
+  });
+
+  it('matchSupportedLanguage retorna null cuando prefix base no hace match', () => {
+    const result = matchSupportedLanguage('/fr/about', ['es', 'en']);
+
+    expect(result).toBeNull();
+  });
+
+  it('stripLanguagePrefix retorna / cuando despues de quitar el prefijo no queda nada y redirige', () => {
+    const redirect = getRoutingRedirect(new URL('https://example.dev/en/'), {
+      defaultLang: 'en',
+      supportedLangs: ['en', 'es'],
+      routing: {
+        strategy: 'prefix-except-default',
+        prefixDefaultLocale: false,
+      },
+    });
+
+    expect(redirect).not.toBeNull();
+    expect(redirect?.pathname).toBe('/');
+  });
+
+  it('getRoutingRedirect con prefix-except-default y prefixDefaultLocale=true redirige defaultLang sin prefijo', () => {
+    const redirect = getRoutingRedirect(new URL('https://example.dev/about'), {
+      defaultLang: 'es',
+      supportedLangs: ['es', 'en'],
+      routing: {
+        strategy: 'prefix-except-default',
+        prefixDefaultLocale: true,
+        redirectToDefaultLocale: true,
+      },
+    });
+
+    expect(redirect?.pathname).toBe('/es/about');
+  });
+
+  it('getRoutingRedirect retorna null cuando URL actual ya tiene el formato correcto', () => {
+    const redirect = getRoutingRedirect(
+      new URL('https://example.dev/es/about'),
+      {
+        defaultLang: 'es',
+        supportedLangs: ['es', 'en'],
+        routing: {
+          strategy: 'prefix',
+          prefixDefaultLocale: true,
+          redirectToDefaultLocale: false,
+        },
+      },
+    );
 
     expect(redirect).toBeNull();
   });

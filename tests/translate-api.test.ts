@@ -129,4 +129,60 @@ describe('translate API (client cache)', () => {
     expect(t('items.count', { values: { count: 1 } })).toBe('Hay 1 item');
     expect(t('items.count', { values: { count: 5 } })).toBe('Hay 5 items');
   });
+
+  it('pluralizacion desactivada retorna la clave base sin sufijo', () => {
+    updateConfig({
+      pluralization: { enabled: false, field: 'count' },
+    });
+
+    populateClientCache('es', {
+      items: {
+        count: 'Cantidad',
+      },
+    });
+
+    expect(t('items.count', { values: { count: 3 } })).toBe('Cantidad');
+  });
+
+  it('valores de count no finitos no activan pluralizacion', () => {
+    expect(t('items.count', { values: { count: Number.NaN } })).toBe(
+      'items.count',
+    );
+    expect(t('items.count', { values: { count: Infinity } })).toBe(
+      'items.count',
+    );
+  });
+
+  it('count como string se convierte a numero para pluralizacion', () => {
+    populateClientCache('en', {
+      items: {
+        count_one: '{count} item',
+        count_other: '{count} items',
+      },
+    });
+
+    expect(t('items.count', { values: { count: '1' }, lang: 'en' })).toBe(
+      '1 item',
+    );
+    expect(t('items.count', { values: { count: '5' }, lang: 'en' })).toBe(
+      '5 items',
+    );
+  });
+
+  it('fallback de plural key en cliente', () => {
+    updateConfig({
+      fallback: { es: 'en' },
+    });
+
+    populateClientCache('en', {
+      items: {
+        count_one: '{count} item from en',
+        count_other: '{count} items from en',
+      },
+    });
+
+    expect(t('items.count', { values: { count: 1 }, lang: 'es' })).toBe(
+      '1 item from en',
+    );
+  });
 });
