@@ -236,13 +236,6 @@ function collectNamespacedKeys(
   for (const [namespace, namespaceTranslations] of Object.entries(
     translations,
   )) {
-    if (
-      typeof namespaceTranslations !== 'object' ||
-      namespaceTranslations === null
-    ) {
-      continue;
-    }
-
     const namespaceKeys: string[] = [];
     extractKeysRecursive(
       namespaceTranslations as Record<string, any>,

@@ -35,14 +35,6 @@ function normalizePathname(pathname: string): string {
   return pathname.startsWith('/') ? pathname : `/${pathname}`;
 }
 
-function removeTrailingSlash(pathname: string): string {
-  if (pathname.length > 1 && pathname.endsWith('/')) {
-    return pathname.slice(0, -1);
-  }
-
-  return pathname;
-}
-
 /**
  * Valida si un string es una estrategia de routing soportada.
  */
@@ -181,25 +173,12 @@ function prefixPathWithLanguage(pathname: string, lang: Language): string {
   return `/${lang}${normalized}`;
 }
 
-function stripLanguagePrefix(pathname: string, lang: Language): string {
+function stripLanguagePrefix(pathname: string, _lang: Language): string {
   const normalized = normalizePathname(pathname);
   const segments = normalized.split('/').filter(Boolean);
-
-  if (segments.length === 0) {
-    return '/';
-  }
-
-  if (segments[0].toLowerCase() !== lang.toLowerCase()) {
-    return normalized;
-  }
-
   const rest = segments.slice(1);
 
-  if (rest.length === 0) {
-    return '/';
-  }
-
-  return `/${rest.join('/')}`;
+  return rest.length === 0 ? '/' : `/${rest.join('/')}`;
 }
 
 /**
@@ -237,13 +216,6 @@ export function getRoutingRedirect(
   }
 
   if (!targetPathname) {
-    return null;
-  }
-
-  const normalizedCurrent = removeTrailingSlash(currentPathname);
-  const normalizedTarget = removeTrailingSlash(targetPathname);
-
-  if (normalizedCurrent === normalizedTarget) {
     return null;
   }
 

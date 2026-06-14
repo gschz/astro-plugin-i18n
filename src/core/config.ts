@@ -272,20 +272,9 @@ export function getSupportedLanguages(): Language[] {
 
 /**
  * Devuelve el idioma por defecto configurado.
- *
- * @throws {Error} Si `defaultLang` no ha sido configurado, ya que es un campo
- *   requerido en tiempo de ejecución.
  */
 export function getDefaultLanguage(): Language {
-  const currentConfig = getConfig();
-
-  if (!currentConfig.defaultLang) {
-    throw new Error(
-      "i18n plugin error: Default language is not defined. Please configure 'defaultLang' in your Astro integration options.",
-    );
-  }
-
-  return currentConfig.defaultLang;
+  return getConfig().defaultLang as Language;
 }
 
 export { defaultConfig };

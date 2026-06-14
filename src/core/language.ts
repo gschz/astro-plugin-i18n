@@ -121,10 +121,6 @@ export function getCurrentLanguage(locals?: Record<string, any>): Language {
   const defaultLang =
     localsConfig?.defaultLang || globalConfig.defaultLang || 'es';
 
-  if (!globalConfig.defaultLang && !localsConfig?.defaultLang) {
-    console.debug('[i18n] Usando idioma por defecto:', defaultLang);
-  }
-
   return defaultLang;
 }
 
@@ -238,10 +234,6 @@ function resolveInitialLanguage(
 function resolveStoredLanguage(
   supportedLangs: Language[],
 ): Language | undefined {
-  if (typeof localStorage === 'undefined') {
-    return undefined;
-  }
-
   const storedLang =
     localStorage.getItem('language') || localStorage.getItem('lang');
   if (storedLang && supportedLangs.includes(storedLang)) {

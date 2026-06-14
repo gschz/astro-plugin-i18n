@@ -10,13 +10,12 @@
 
 import { allTranslations as _i18nAllTranslations } from 'virtual:@gschz/astro-plugin-i18n/internal';
 import { populateClientCache } from './core/translate';
-import type { Language } from './types';
 
 // Poblamos la caché del cliente con todas las traducciones al cargar el módulo.
 // Esto garantiza que t() funcione inmediatamente sin necesidad de bootstrap ni
 // fetch(). El módulo virtual es resuelto por Vite en tiempo de build/dev.
 for (const [lang, translations] of Object.entries(_i18nAllTranslations)) {
-  populateClientCache(lang as Language, translations as Record<string, any>);
+  populateClientCache(lang, translations);
 }
 
 export type {
