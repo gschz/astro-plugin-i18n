@@ -1,6 +1,6 @@
 # Referencia de API
 
-Referencia técnica de **`@gschz/astro-plugin-i18n` v1.4.10-rc.1**.
+Referencia técnica de **`@gschz/astro-plugin-i18n` v2.0.0**.
 
 <p align="center">
   Idioma: <strong>ES</strong> | <a href="API.en.md">EN</a>
